@@ -1,0 +1,18 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="SalemCartographer.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="PathSession" Type="System.String" Scope="User">
+      <Value Profile="(Default)">%USERPROFILE%\Salem\map\game.salemthegame.com</Value>
+    </Setting>
+    <Setting Name="PathCartographer" Type="System.String" Scope="User">
+      <Value Profile="(Default)">%USERPROFILE%\Salem\Cartographer</Value>
+    </Setting>
+    <Setting Name="FilterSessions" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="FilterSessionTileMinCount" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">10</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>
