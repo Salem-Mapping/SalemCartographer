@@ -16,12 +16,12 @@ namespace SalemCartographer.App
     public AreaProcessor() {
     }
 
-    public AreaProcessor(string Path) {
-      SetPath(Path);
+    public AreaProcessor(string path) {
+      SetPath(path);
     }
 
-    public void SetPath(string Path) {
-      AreaPath = Path;
+    public void SetPath(string path) {
+      AreaPath = path;
       Validate();
     }
 
@@ -37,23 +37,28 @@ namespace SalemCartographer.App
       return BuildDto(AreaPath);
     }
 
-    public static AreaDto BuildDto(String AreaPath) {
+    public static AreaDto BuildDto(String areaPath) {
+      string name = areaPath != null ? Path.GetFileName(areaPath) : areaPath;
       AreaDto Area = new() {
-        Path = AreaPath,
-        Directory = AreaPath != null ? Path.GetFileName(AreaPath) : AreaPath,
+        Path = areaPath,
+        Name = name,
+        Directory = name,
       };
-      if (!Directory.Exists(AreaPath)) {
-        return Area;
+      return Area;
+    }
+
+    public static void RefreshDto(AreaDto area) {
+      if (!Directory.Exists(area.Path)) {
+        return;
       }
-      TileProcessor TileProcessor = new TileProcessor();
-      string[] Files = Directory.GetFiles(Area.Path);
-      foreach (var File in Files) {
-        TileProcessor.SetPath(File);
-        if (TileProcessor.IsValid()) {
-          Area.AddTile(TileProcessor.GetDto());
+      TileProcessor tileProcessor = new();
+      string[] files = Directory.GetFiles(area.Path);
+      foreach (var file in files) {
+        tileProcessor.SetPath(file);
+        if (tileProcessor.IsValid()) {
+          area.AddTile(tileProcessor.GetDto());
         }
       }
-      return Area;
     }
 
   }

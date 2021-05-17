@@ -73,6 +73,16 @@ namespace SalemCartographer.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap folder_open_solid {
+            get {
+                object obj = ResourceManager.GetObject("folder-open-solid", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap object_group_regular_24_black {
             get {
                 object obj = ResourceManager.GetObject("object_group_regular_24_black", resourceCulture);

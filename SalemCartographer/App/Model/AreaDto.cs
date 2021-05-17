@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace SalemCartographer.App.Model
 {
@@ -16,40 +17,47 @@ namespace SalemCartographer.App.Model
     public string Directory { get; set; }
     public string Hash { get; set; }
     public Dictionary<string, TileDto> Tiles { get; set; }
+    // transient
+    public Dictionary<string, TileDto> Checksums { get; set; }
+    // transient
+    public List<TileDto> TileList {
+      get {
+        return Tiles.Values.ToList();
+      }
+    }
+
     public string DisplayString {
       get {
-        return string.Format(FORMAT_TITLE, Directory, Tiles.Count, GetDimensions());
+        return string.Format(FORMAT_TITLE, Name, Tiles.Count, GetDimensions());
       }
     }
+
+    public string Name { get; internal set; }
 
     public AreaDto() {
-      Tiles = new Dictionary<string, TileDto>();
+      Tiles = new();
+      Checksums = new();
     }
 
-    public void AddTile(TileDto Dto) {
-      if (Tiles == null) {
-        Tiles = new Dictionary<string, TileDto>();
-      }
-      string Key = Dto.GetKey();
-      if (!Tiles.ContainsKey(Key)) {
-        Tiles.Add(Key, Dto);
-      }
+    public void AddTile(TileDto dto) {
+      Tiles[dto.GetKey()] = dto;
+      Checksums[dto.Checksum] = dto;
     }
 
     public string GetDimensions() {
-      int PosXMin = 0;
-      int PosXMax = 0;
-      int PosYMin = 0;
-      int PosYMax = 0;
+      int posXMin = 0;
+      int posXMax = 0;
+      int posYMin = 0;
+      int posYMax = 0;
       foreach (var Tile in Tiles.Values) {
-        PosXMin = Math.Min(PosXMin, Tile.PosX);
-        PosXMax = Math.Max(PosXMax, Tile.PosX);
-        PosYMin = Math.Min(PosYMin, Tile.PosY);
-        PosYMax = Math.Max(PosYMax, Tile.PosY);
+        posXMin = Math.Min(posXMin, Tile.PosX);
+        posXMax = Math.Max(posXMax, Tile.PosX);
+        posYMin = Math.Min(posYMin, Tile.PosY);
+        posYMax = Math.Max(posYMax, Tile.PosY);
       }
-      int X = Math.Abs(PosXMin - PosXMax) + 1;
-      int Y = Math.Abs(PosXMin - PosXMax) + 1;
-      return String.Format(FORMAT_DIMENSION, X, Y);
+      int x = Math.Abs(posXMin - posXMax) + 1;
+      int y = Math.Abs(posXMin - posXMax) + 1;
+      return String.Format(FORMAT_DIMENSION, x, y);
     }
 
   }

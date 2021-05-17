@@ -24,8 +24,10 @@ namespace SalemCartographer.App.UI
     public Color BackgroundColor = Color.Black;
     public bool GridShow = true;
     public Color GridColor = Color.White;
-    public Color NullmeridianColor = Color.Yellow;
+    public Color NullmeridianColor = Color.Orange;
     public Color SelectionColor = Color.Red;
+    public Color MatchColor = Color.Green;
+    public Color PartialMatchColor = Color.Yellow;
 
     // control vars
     private Rectangle ControlCanvas;
@@ -66,7 +68,7 @@ namespace SalemCartographer.App.UI
 
     protected void PaintTiles(PaintEventArgs e) {
       foreach (var Tile in Area.Tiles.Values) {
-        Point Position = CalcTileCoordinates(Tile.Position);
+        Point Position = CalcTileCoordinates(Tile.Coordinate);
         if (Position.X <= -SIZE_TILE || Width + SIZE_TILE <= Position.X
           || Position.Y <= -SIZE_TILE || Height + SIZE_TILE <= Position.Y) {
           continue;

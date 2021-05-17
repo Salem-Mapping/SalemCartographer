@@ -9,6 +9,8 @@ namespace SalemCartographer.App.Model
 
   public class TileDto
   {
+    public const string KEY_FORMAT = "{0}_{1}";
+
     // permanent
     public int PosX { get; set; }
     public int PosY { get; set; }
@@ -17,23 +19,25 @@ namespace SalemCartographer.App.Model
     public long Size { get; set; }
     public DateTime Date { get; set; }
     // transient
-    public Point Position => new(PosX, PosY);
+    public Point Coordinate => new(PosX, PosY);
     public string Path { get; set; }
-    private Image Img;
+
+    private WeakReference<Image> _Img;
 
     public TileDto() {
 
     }
 
     public Image GetImage() {
-      if (Img == null && File.Exists(Path)) {
-        Img = Image.FromFile(Path);
+      if (_Img ==null || !_Img.TryGetTarget(out var target)) {
+        target = Image.FromFile(Path);
+        _Img = new(target);
       }
-      return Img;
+      return target;
     }
 
     public string GetKey() {
-      return String.Format("{0}_{1}", PosX, PosY);
+      return String.Format(KEY_FORMAT, PosX, PosY);
     }
 
   }

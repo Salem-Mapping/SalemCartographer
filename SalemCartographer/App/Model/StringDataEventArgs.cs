@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SalemCartographer.App.Model
 {
-  class StringDataEventArgs : EventArgs
+  public class StringDataEventArgs : EventArgs
   {
     public string Value;
 

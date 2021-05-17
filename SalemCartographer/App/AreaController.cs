@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace SalemCartographer.App
 {
- abstract class AreaController
+  abstract class AreaController
   {
     static readonly char[] invalidFileNameChars = Path.GetInvalidFileNameChars();
 
@@ -18,7 +18,19 @@ namespace SalemCartographer.App
 
     public abstract event EventHandler DataChanged;
 
-    protected List<AreaDto> FetchAreas(string Path) {
+    protected static void RefreshAreas(Dictionary<string, AreaDto> Areas, string DirectoryPath) {
+      string[] Paths = Directory.GetDirectories(DirectoryPath);
+      foreach (var AreaPath in Paths) {
+        AreaDto Area = AreaProcessor.BuildDto(AreaPath);
+        if (Areas.ContainsKey(Area.Name)) {
+          Area = Areas[Area.Name];
+        }
+        AreaProcessor.RefreshDto(Area);
+        Areas[Area.Name] = Area;
+      }
+    }
+
+    protected static List<AreaDto> FetchAreas(string Path) {
       return Directory.GetDirectories(Path).Select(AreaProcessor.BuildDto).ToList();
     }
 

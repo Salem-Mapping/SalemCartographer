@@ -9,6 +9,11 @@ namespace SalemCartographer.App.Model
   public class WorldDto
   {
     public Dictionary<string, AreaDto> Areas { get; set; }
+    public List<AreaDto> AreaList {
+      get {
+        return Areas.Values.ToList();
+      }
+    }
 
     public WorldDto() {
       Areas = new();

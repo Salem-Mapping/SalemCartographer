@@ -9,9 +9,9 @@ using System.Windows.Forms;
 
 namespace SalemCartographer.App
 {
-  class SalemCartographerApp : ApplicationContext
+  class SalemCartographerApplication : ApplicationContext
   {
-    public SalemCartographerApp() : base() {
+    public SalemCartographerApplication() : base() {
       MainForm = new UI.MainForm();
     }
 

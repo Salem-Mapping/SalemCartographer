@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -24,10 +25,12 @@ namespace SalemCartographer.App.UI
     protected void Initalize() {
       Text = ApplicationConstants.ProductName;
       ListSessions.DisplayMember = AreaDto.FIELD_TITLE;
-      ListSessions.SelectedValueChanged += OnSessioSelectionChanged;
+      ListSessions.SelectedValueChanged += OnSelectionChanged;
       ListMaps.DisplayMember = AreaDto.FIELD_TITLE;
-      ListMaps.SelectedValueChanged += OnSessioSelectionChanged;
+      ListMaps.SelectedValueChanged += OnSelectionChanged;
+      ToolSessionOpen.Click += OnToolSessionOpen;
       ToolMapsAdd.Click += OnToolMapsAddClicked;
+      SessionController.Instance.SessionChanged += OnSessionDataChanged;
     }
 
     private void PaintArea(AreaDto Area) {
@@ -38,20 +41,46 @@ namespace SalemCartographer.App.UI
       Canvas.SetArea(Area);
     }
 
-    private void OnSessioSelectionChanged(object sender, EventArgs e) {
+    private void OnSelectionChanged(object sender, EventArgs e) {
       ListBox List = (ListBox)sender;
-      PaintArea((AreaDto)List.SelectedItem);
+      if (List.SelectedItem is not AreaDto selectedItem) {
+        return;
+      } 
+      if (List.Name == ListSessions.Name) {
+        IList<AreaDto> knownAreas = WorldController.Instance.GetKnownAreas(selectedItem);
+        Debug.WriteLine("knownAreas: " + knownAreas.Count);
+      }
+      PaintArea(selectedItem);
     }
 
     protected void BuildWorldList() {
       if (WorldController.Instance.World.Areas.Count == 0) {
         WorldController.Instance.CreateAreaFromSession();
       }
-      ListMaps.DataSource = WorldController.Instance.World.Areas.Values.ToList();
+      ListMaps.DataSource = WorldController.Instance.World.AreaList;
     }
 
     protected void BuildSessionList() {
       ListSessions.DataSource = SessionController.Instance.SessionList;
+    }
+
+    protected void OnSessionDataChanged(Object sender, StringDataEventArgs e) {
+      string currentSessionName = e.Value;
+      BuildSessionList();
+      foreach (AreaDto session in ListSessions.Items) {
+        if (currentSessionName.Equals(session.Name)) {
+          ListSessions.SelectedItem = session;
+          break;
+        }
+      }
+    }
+
+    protected void OnToolSessionOpen(Object sender, EventArgs e) {
+      AreaDto area = (AreaDto)ListSessions.SelectedItem;
+      Process.Start(new ProcessStartInfo {
+        Arguments = area.Path,
+        FileName = "explorer.exe"
+      });
     }
 
     protected void OnToolMapsAddClicked(Object sender, EventArgs e) {

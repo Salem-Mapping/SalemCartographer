@@ -11,7 +11,7 @@ namespace SalemCartographer.App
 {
   class TileProcessor : IProcessor<TileDto>
   {
-    private static SHA256 Sha256 = SHA256.Create();
+    private static readonly SHA256 Sha256 = SHA256.Create();
     protected string TilePath { get; set; }
     protected bool Valid { get; set; }
 
@@ -44,7 +44,7 @@ namespace SalemCartographer.App
     }
 
     private static TileDto BuildDto(String TilePath) {
-      TileDto Tile = new TileDto {
+      TileDto Tile = new() {
         Path = TilePath,
         FileName = TilePath != null ? Path.GetFileName(TilePath) : TilePath
       };
@@ -61,7 +61,7 @@ namespace SalemCartographer.App
       if (!File.Exists(TilePath)) {
         return Tile;
       }
-      FileInfo FileInfo = new FileInfo(TilePath);
+      FileInfo FileInfo = new(TilePath);
       Tile.Size = FileInfo.Length;
       Tile.Date = FileInfo.LastWriteTime;
       Tile.Checksum = GetChecksum(TilePath);
