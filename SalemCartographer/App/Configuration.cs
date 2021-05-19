@@ -1,15 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SalemCartographer.App
 {
-  class Configuration
+  internal class Configuration
   {
-
     private static readonly Properties.Settings Settings = Properties.Settings.Default;
 
     public static string GetSessionsPath() => finalizePath(Settings.PathSession);
@@ -29,6 +23,5 @@ namespace SalemCartographer.App
       }
       return Path;
     }
-
   }
 }

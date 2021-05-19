@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SalemCartographer.App
 {
@@ -11,7 +8,7 @@ namespace SalemCartographer.App
   ///     A list that only holds weak references to various objects
   /// </summary>
   /// <typeparam name="T">The type of class object held in the list</typeparam>
-  class WeakList<T> : IList, IList<T>, IReadOnlyList<T>,
+  internal class WeakList<T> : IList, IList<T>, IReadOnlyList<T>,
     ICollection, ICollection<T>, IReadOnlyCollection<T>,
     IEnumerable, IEnumerable<T>, IEnumerator<T> where T : class
   {
@@ -21,6 +18,7 @@ namespace SalemCartographer.App
     private List<WeakReference<T>> _list = new List<WeakReference<T>>();
 
     #region IList
+
     /// <summary>
     ///     True if the list is fixed in size (it is not)
     /// </summary>
@@ -67,7 +65,6 @@ namespace SalemCartographer.App
       }
     }
 
-
     /// <summary>
     ///     Clears the list
     /// </summary>
@@ -112,7 +109,6 @@ namespace SalemCartographer.App
       }
     }
 
-
     /// <summary>
     ///     Removes a value from the list
     /// </summary>
@@ -131,9 +127,11 @@ namespace SalemCartographer.App
         _list.RemoveAt(index);
       }
     }
+
     #endregion IList
 
     #region IList<T>
+
     /// <summary>
     ///     Gets or sets an object by index
     /// </summary>
@@ -150,7 +148,6 @@ namespace SalemCartographer.App
         _list[index].SetTarget(value);
       }
     }
-
 
     /// <summary>
     ///     Finds the index of an item
@@ -174,8 +171,6 @@ namespace SalemCartographer.App
       return -1;
     }
 
-
-
     /// <summary>
     ///     Inserts an item at a given index
     /// </summary>
@@ -188,9 +183,11 @@ namespace SalemCartographer.App
         _list.Insert(index, new WeakReference<T>(v));
       }
     }
-    #endregion
+
+    #endregion IList<T>
 
     #region ICollection
+
     /// <summary>
     ///     Gets the number of items currently in the list
     /// </summary>
@@ -229,9 +226,11 @@ namespace SalemCartographer.App
         }
       }
     }
-    #endregion
 
-    #region  ICollection<T>
+    #endregion ICollection
+
+    #region ICollection<T>
+
     /// <summary>
     ///     Adds an object to the list
     /// </summary>
@@ -267,7 +266,6 @@ namespace SalemCartographer.App
       }
       return false;
     }
-
 
     /// <summary>
     ///     Copies the contents into an array
@@ -312,7 +310,8 @@ namespace SalemCartographer.App
       }
       return false;
     }
-    #endregion
+
+    #endregion ICollection<T>
 
     #region IEnumerator
 
@@ -374,9 +373,10 @@ namespace SalemCartographer.App
        (_list.GetEnumerator() as IEnumerator)?.Reset();
     }
 
-    #endregion
+    #endregion IEnumerator
 
     #region IEnumerable
+
     /// <summary>
     ///     This list is an enumerator
     /// </summary>
@@ -384,9 +384,11 @@ namespace SalemCartographer.App
     IEnumerator IEnumerable.GetEnumerator() {
       return this;
     }
-    #endregion
+
+    #endregion IEnumerable
 
     #region IEnumerable<T>
+
     /// <summary>
     ///     Gets this object as an enumerator
     /// </summary>
@@ -394,16 +396,18 @@ namespace SalemCartographer.App
     public IEnumerator<T> GetEnumerator() {
       return this;
     }
-    #endregion
+
+    #endregion IEnumerable<T>
 
     #region IDisposable
+
     /// <summary>
     ///     The dispose method of the list
     /// </summary>
     public void Dispose() {
       _position = -1;
     }
-    #endregion
-  }
 
+    #endregion IDisposable
+  }
 }

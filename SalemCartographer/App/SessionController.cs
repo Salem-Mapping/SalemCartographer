@@ -1,20 +1,19 @@
-﻿using System;
+﻿using SalemCartographer.App.Enum;
+using SalemCartographer.App.Model;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using SalemCartographer.App.Model;
 
 namespace SalemCartographer.App
 {
-
-  class SessionController : AreaController
+  internal class SessionController : AreaController
   {
     private const string CurrentSessionFile = ApplicationConstants.CurrentSessionFile;
     private static SessionController _Instance;
+
     public static SessionController Instance {
       get {
         if (_Instance == null) {
@@ -25,64 +24,83 @@ namespace SalemCartographer.App
     }
 
     public override event EventHandler DataChanged;
+
     public event EventHandler<StringDataEventArgs> SessionChanged;
 
+    public override string DirectoryPath => Configuration.GetSessionsPath();
+    public override AreaType Type => AreaType.Session;
     public string CurrentSession { get; private set; }
     public Dictionary<string, AreaDto> Sessions { get; private set; }
+
     public List<AreaDto> SessionList {
       get {
         return Sessions.Values.ToList();
       }
     }
 
-    private FileSystemWatcher Watcher;
+    private FileSystemMonitor watcher;
 
-    SessionController() {
+    private SessionController() {
       Sessions = new();
       SetupWatcher();
       Refresh();
     }
 
     public void Refresh() {
-      string Path = Configuration.GetSessionsPath();
-      if (!Directory.Exists(Path)) {
+      string path = DirectoryPath;
+      if (!Directory.Exists(path)) {
         return;
       }
       ReadCurrentSessionName();
-      RefreshAreas(Sessions, Path);
+      RefreshAreas(Sessions, path);
+      DataChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    private void OnSessionFilesChanged(object source, FileSystemEventArgs e) {
-      if (!File.Exists(e.FullPath)) {
-        return;
+    public bool Delete(AreaDto session) {
+      if (Sessions.ContainsKey(session.Directory)) {
+        Sessions.Remove(session.Directory);
       }
-      if (CurrentSessionFile.Equals(e.Name)) {
-        ReadCurrentSessionName();
-        SessionChanged?.Invoke(this, new StringDataEventArgs(CurrentSession));
-        Debug.WriteLine(String.Format("Session changed to: {0} -> {1}", e.Name, CurrentSession));
-      } else {
-        Debug.WriteLine(String.Format("File: {0} -> {1}", e.Name, e.ChangeType));
+      bool result = DeleteArea(session);
+      DataChanged?.Invoke(this, EventArgs.Empty);
+      return result;
+    }
+
+    private void OnSessionFilesChanged(object source, DataEventArgs<List<FileSystemEventArgs>> events) {
+      bool refreshNeeded = false;
+      foreach (var e in events.Value) {
+        if (!File.Exists(e.FullPath)) {
+          continue;
+        }
+        if (CurrentSessionFile.Equals(e.Name)) {
+          ReadCurrentSessionName();
+          SessionChanged?.Invoke(this, new StringDataEventArgs(CurrentSession));
+          Debug.WriteLine(String.Format("Session changed to: {0} -> {1}", e.Name, CurrentSession));
+        } else {
+          Debug.WriteLine(String.Format("File: {0} -> {1}", e.Name, e.ChangeType));
+          refreshNeeded = true;
+        }
       }
-      // DataChanged?.Invoke(this, e);
-      Refresh();
+      if (refreshNeeded) {
+        Refresh();
+      }
     }
 
     protected void SetupWatcher() {
-      string WatchedPath = Configuration.GetSessionsPath();
-      if (Watcher != null) {
-        Watcher.Changed -= OnSessionFilesChanged;
-        Watcher.Dispose();
+      string WatchedPath = DirectoryPath;
+      if (watcher != null) {
+        watcher.ChangedBulk -= OnSessionFilesChanged;
+        watcher.Dispose();
       }
-      Watcher = new(WatchedPath, "*.*");
-      Watcher.IncludeSubdirectories = true;
-      Watcher.NotifyFilter = NotifyFilters.LastWrite;
-      Watcher.Changed += OnSessionFilesChanged;
-      Watcher.EnableRaisingEvents = true;
+      watcher = new(WatchedPath, "*.*");
+      watcher.IncludeSubdirectories = true;
+      watcher.NotifyFilter = NotifyFilters.LastWrite;
+      watcher.ChangedBulk += OnSessionFilesChanged;
+      watcher.EnableRaisingEvents = true;
       Debug.WriteLine(String.Format("setup watcher for {0}", WatchedPath));
     }
 
     protected string ReadCurrentSessionName() {
-      string SessionsPath = Configuration.GetSessionsPath();
+      string SessionsPath = DirectoryPath;
       if (File.Exists(SessionsPath + CurrentSessionFile)) {
         string Text = File.ReadAllText(SessionsPath + CurrentSessionFile);
         MatchCollection Matches = ApplicationConstants.RegexJsVar.Matches(Text);
@@ -96,6 +114,5 @@ namespace SalemCartographer.App
       }
       return CurrentSession;
     }
-
   }
 }

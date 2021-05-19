@@ -1,22 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using SalemCartographer.App.Model;
+using System;
+using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
-using SalemCartographer.App.Model;
 
 namespace SalemCartographer.App
 {
-  class TileProcessor : IProcessor<TileDto>
+  internal class TileProcessor : IProcessor<TileDto>
   {
     private static readonly SHA256 Sha256 = SHA256.Create();
     protected string TilePath { get; set; }
     protected bool Valid { get; set; }
 
     public TileProcessor() {
-
     }
 
     public TileProcessor(string Path) {
@@ -55,16 +51,19 @@ namespace SalemCartographer.App
           Tile.PosX = int.Parse(FileParts[1]);
           Tile.PosY = int.Parse(FileParts[2]);
         } catch (Exception e) {
-          Console.WriteLine(e);
+          Debug.WriteLine(e);
         }
       }
       if (!File.Exists(TilePath)) {
         return Tile;
       }
       FileInfo FileInfo = new(TilePath);
-      Tile.Size = FileInfo.Length;
-      Tile.Date = FileInfo.LastWriteTime;
-      Tile.Checksum = GetChecksum(TilePath);
+      if (!Tile.Date.Equals(FileInfo.LastWriteTime)
+        || Tile.Size != FileInfo.Length) {
+        Tile.Size = FileInfo.Length;
+        Tile.Date = FileInfo.LastWriteTime;
+        Tile.Checksum = GetChecksum(TilePath);
+      }
       return Tile;
     }
 
@@ -87,6 +86,10 @@ namespace SalemCartographer.App
       string result = "";
       foreach (byte b in bytes) result += b.ToString("x2");
       return result;
+    }
+
+    internal static string GenerateFileName(TileDto newTile) {
+      return String.Format(ApplicationConstants.TileFormat, newTile.PosX, newTile.PosY);
     }
   }
 }

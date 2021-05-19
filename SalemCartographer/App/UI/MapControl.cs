@@ -1,33 +1,57 @@
 ﻿using SalemCartographer.App.Model;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace SalemCartographer.App.UI
-{ 
+{
   public partial class MapControl : Control
   {
     // definitions
     private const int SIZE_TILE = ApplicationConstants.TileSize;
+
     private const GraphicsUnit UNIT = GraphicsUnit.Pixel;
-    private RectangleF IMAGE_RECT = new RectangleF(0.0F, 0.0F, SIZE_TILE, SIZE_TILE);
 
     // control settings
     public int FpsLock = 30;
+
     public Color BackgroundColor = Color.Black;
     public bool GridShow = true;
     public Color GridColor = Color.White;
-    public Color NullmeridianColor = Color.Orange;
-    public Color SelectionColor = Color.Red;
+    public Color NullmeridianColor = Color.Blue;
     public Color MatchColor = Color.Green;
+    public float MatchScore = 0.9F;
     public Color PartialMatchColor = Color.Yellow;
+    public float PartialScore = 0.5F;
+    public Color DismatchColor = Color.Red;
+
+    public Point? SelectedTile {
+      get => selectedTile; set {
+        selectedTile = value;
+        if (value.HasValue) {
+          CenteredTile = value.Value;
+        } else {
+          Invalidate();
+        }
+      }
+    }
+
+    public Point CenteredTile {
+      get => CalcTilePosition(new(areaCenter.X * -1, areaCenter.Y * -1)); set {
+        areaCenter = CalcTileCoordinates(new(value.X * -1, value.Y * -1));
+        Invalidate();
+      }
+    }
+
+    // selection
+    public bool AllowSelection = true;
+    public Color SelectionColor = Color.DarkViolet;
+
+    public event EventHandler SelectionChanged;
 
     // control vars
     private Rectangle ControlCanvas;
@@ -35,9 +59,12 @@ namespace SalemCartographer.App.UI
     private DateTime LastPaint;
 
     // area vars
-    private AreaDto Area;
-    private Point AreaCenter;
-    private Point? SelectedTile;
+    private AreaDto area;
+    private Point areaCenter;
+    private Size tileSize = new(SIZE_TILE, SIZE_TILE);
+    private Rectangle imageRect = new(new(0, 0), new(SIZE_TILE, SIZE_TILE));
+    private IEnumerable<MatchedAreaDto> matchedAreas = Enumerable.Empty<MatchedAreaDto>();
+    private Point? selectedTile;
 
     // status vars
     private MouseButtons MouseButton;
@@ -48,32 +75,42 @@ namespace SalemCartographer.App.UI
       Initalize();
     }
 
+    public void AddMatchedAreas(IEnumerable<MatchedAreaDto> areas) {
+      matchedAreas = areas;
+      Invalidate();
+    }
+
     protected override void OnPaint(PaintEventArgs e) {
-      base.OnPaint(e);
-      if (Area == null) {
-        return;
-      }
-      if ((DateTime.Now - LastPaint).TotalMilliseconds < FpsLock / 1000) {
-        Invalidate();
-        return;
-      }
-      LastPaint = DateTime.Now;
+      try {
+        base.OnPaint(e);
+        if (area == null) {
+          return;
+        }
+        if ((DateTime.Now - LastPaint).TotalMilliseconds < FpsLock / 1000) {
+          Invalidate();
+          return;
+        }
+        LastPaint = DateTime.Now;
 
-      e.Graphics.Clear(BackgroundColor);
-      PaintTiles(e);
-      PaintGrid(e);
-
-      // PrintFps();
+        e.Graphics.Clear(BackgroundColor);
+        PaintTiles(e);
+        PaintGrid(e);
+        // PrintFps();
+      } finally {
+        e.Dispose();
+      }
     }
 
     protected void PaintTiles(PaintEventArgs e) {
-      foreach (var Tile in Area.Tiles.Values) {
+      foreach (var Tile in area.Tiles.Values) {
         Point Position = CalcTileCoordinates(Tile.Coordinate);
         if (Position.X <= -SIZE_TILE || Width + SIZE_TILE <= Position.X
           || Position.Y <= -SIZE_TILE || Height + SIZE_TILE <= Position.Y) {
           continue;
         }
-        e.Graphics.DrawImage(Tile.GetImage(), Position.X, Position.Y, IMAGE_RECT, UNIT);
+
+        Image image = Tile.GetImage();
+        e.Graphics.DrawImage(image, Position.X, Position.Y, imageRect, UNIT);
       }
     }
 
@@ -87,17 +124,49 @@ namespace SalemCartographer.App.UI
       for (int y = Offset.Y; y < Height; y += SIZE_TILE) {
         e.Graphics.DrawLine(GridPen, new(0, y), new(Width, y));
       }
-      Rectangle Nullmeridian = new Rectangle(Center, new(SIZE_TILE, SIZE_TILE));
+
+      Rectangle Nullmeridian = new(Center, tileSize);
       if (Nullmeridian.IntersectsWith(ControlCanvas)) {
-        Pen NullmeridianPen = new(NullmeridianColor, 1);
-        e.Graphics.DrawRectangle(NullmeridianPen, Nullmeridian);
+        GridPen.Color = NullmeridianColor;
+        e.Graphics.DrawRectangle(GridPen, Nullmeridian);
       }
+
+      AreaDto matchedArea = area;
+      if (matchedAreas.Any()) {
+        try {
+          matchedArea = matchedAreas.OrderByDescending(a => a.ScoreNormalized).First();
+        } catch (Exception ex) {
+          Debug.WriteLine(ex);
+        }
+      }
+      foreach (TileDto tile in area.Tiles.Values) {
+        try {
+          if (tile is not MatchedTileDto matchTile || !matchTile.Score.HasValue) {
+            continue;
+          }
+          Color color;
+          if (MatchScore < matchTile.Score.Value) {
+            color = MatchColor;
+          } else if (PartialScore < matchTile.Score.Value) {
+            color = PartialMatchColor;
+          } else {
+            color = DismatchColor;
+          }
+          Point SelectedCoords = CalcTileCoordinates(tile.Coordinate);
+          Rectangle MatchGrid = new(SelectedCoords, tileSize);
+          GridPen.Color = color;
+          e.Graphics.DrawRectangle(GridPen, MatchGrid);
+        } catch (Exception ex) {
+          Debug.WriteLine(ex);
+        }
+      }
+
       if (SelectedTile.HasValue) {
         Point SelectedCoords = CalcTileCoordinates(SelectedTile.Value);
-        Rectangle Selection = new Rectangle(SelectedCoords, new(SIZE_TILE, SIZE_TILE));
+        Rectangle Selection = new(SelectedCoords, tileSize);
         if (Selection.IntersectsWith(ControlCanvas)) {
-          Pen SelectionPen = new(SelectionColor, 1);
-          e.Graphics.DrawRectangle(SelectionPen, Selection);
+          GridPen.Color = SelectionColor;
+          e.Graphics.DrawRectangle(GridPen, Selection);
         }
       }
     }
@@ -119,20 +188,29 @@ namespace SalemCartographer.App.UI
       base.OnMouseClick(e);
       switch (e.Button) {
         case MouseButtons.Left:
-          SelectedTile = CalcTilePosition(e.Location);
-          Invalidate();
+          if (AllowSelection) {
+            SelectedTile = CalcTilePosition(e.Location);
+            Invalidate();
+            SelectionChanged?.Invoke(this, EventArgs.Empty);
+          }
           break;
+
         case MouseButtons.None:
           break;
+
         case MouseButtons.Right:
           break;
+
         case MouseButtons.Middle:
           ResetAreaCenter();
           break;
+
         case MouseButtons.XButton1:
           break;
+
         case MouseButtons.XButton2:
           break;
+
         default:
           break;
       }
@@ -156,20 +234,26 @@ namespace SalemCartographer.App.UI
       switch (MouseButton) {
         case MouseButtons.Left:
           break;
+
         case MouseButtons.Right:
           if (MouseLast.X != e.X || MouseLast.Y != e.Y) {
-            AreaCenter.Offset(e.X - MouseLast.X, e.Y - MouseLast.Y);
+            areaCenter.Offset(e.X - MouseLast.X, e.Y - MouseLast.Y);
             Invalidate();
           }
           break;
+
         case MouseButtons.Middle:
           break;
+
         case MouseButtons.XButton1:
           break;
+
         case MouseButtons.XButton2:
           break;
+
         case MouseButtons.None:
           break;
+
         default:
           break;
       }
@@ -203,20 +287,22 @@ namespace SalemCartographer.App.UI
     }
 
     public void SetArea(AreaDto Area) {
-      this.Area = Area;
+      area = Area;
+      matchedAreas = Enumerable.Empty<MatchedAreaDto>();
+      SelectedTile = null;
       MouseButton = MouseButtons.None;
       ResetAreaCenter();
       Invalidate();
     }
 
     protected void ResetAreaCenter() {
-      AreaCenter = new(0, 0);
+      areaCenter = new(0, 0);
       Invalidate();
     }
 
     protected Point CalcCenter() {
-      int x = ControlCenter.X - (SIZE_TILE / 2) + AreaCenter.X;
-      int y = ControlCenter.Y - (SIZE_TILE / 2) + AreaCenter.Y;
+      int x = ControlCenter.X - (SIZE_TILE / 2) + areaCenter.X;
+      int y = ControlCenter.Y - (SIZE_TILE / 2) + areaCenter.Y;
       return new(x, y);
     }
 

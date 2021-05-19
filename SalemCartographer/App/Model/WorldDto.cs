@@ -1,14 +1,12 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace SalemCartographer.App.Model
 {
-
   public class WorldDto
   {
     public Dictionary<string, AreaDto> Areas { get; set; }
+
     public List<AreaDto> AreaList {
       get {
         return Areas.Values.ToList();
@@ -30,5 +28,4 @@ namespace SalemCartographer.App.Model
       Areas.Add(NewArea.DisplayString, NewArea);
     }
   }
-
 }

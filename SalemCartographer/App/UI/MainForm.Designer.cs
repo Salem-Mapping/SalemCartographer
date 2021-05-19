@@ -29,6 +29,9 @@ namespace SalemCartographer.App.UI
       this.statusStrip1 = new System.Windows.Forms.StatusStrip();
       this.menuStrip1 = new System.Windows.Forms.MenuStrip();
       this.SplitLeft = new System.Windows.Forms.SplitContainer();
+      this.toolStrip1 = new System.Windows.Forms.ToolStrip();
+      this.ToolSessionOpen = new System.Windows.Forms.ToolStripButton();
+      this.ToolSessionDelete = new System.Windows.Forms.ToolStripButton();
       this.ListSessions = new System.Windows.Forms.ListBox();
       this.SplitRight = new System.Windows.Forms.SplitContainer();
       this.Canvas = new SalemCartographer.App.UI.MapControl();
@@ -36,16 +39,16 @@ namespace SalemCartographer.App.UI
       this.ListMaps = new System.Windows.Forms.ListBox();
       this.ToolMaps = new System.Windows.Forms.ToolStrip();
       this.ToolMapsAdd = new System.Windows.Forms.ToolStripButton();
+      this.ToolMapsOpen = new System.Windows.Forms.ToolStripButton();
       this.ToolMapsDelete = new System.Windows.Forms.ToolStripButton();
       this.ListPoi = new System.Windows.Forms.ListBox();
       this.ToolPoi = new System.Windows.Forms.ToolStrip();
-      this.toolStrip1 = new System.Windows.Forms.ToolStrip();
-      this.ToolSessionOpen = new System.Windows.Forms.ToolStripButton();
-      this.ToolSessionDelete = new System.Windows.Forms.ToolStripButton();
+      this.ToolSessionMerge = new System.Windows.Forms.ToolStripButton();
       ((System.ComponentModel.ISupportInitialize)(this.SplitLeft)).BeginInit();
       this.SplitLeft.Panel1.SuspendLayout();
       this.SplitLeft.Panel2.SuspendLayout();
       this.SplitLeft.SuspendLayout();
+      this.toolStrip1.SuspendLayout();
       ((System.ComponentModel.ISupportInitialize)(this.SplitRight)).BeginInit();
       this.SplitRight.Panel1.SuspendLayout();
       this.SplitRight.Panel2.SuspendLayout();
@@ -55,7 +58,6 @@ namespace SalemCartographer.App.UI
       this.SplitRightHorizontal.Panel2.SuspendLayout();
       this.SplitRightHorizontal.SuspendLayout();
       this.ToolMaps.SuspendLayout();
-      this.toolStrip1.SuspendLayout();
       this.SuspendLayout();
       // 
       // statusStrip1
@@ -98,6 +100,34 @@ namespace SalemCartographer.App.UI
       this.SplitLeft.SplitterWidth = 5;
       this.SplitLeft.TabIndex = 2;
       // 
+      // toolStrip1
+      // 
+      this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.ToolSessionMerge,
+            this.ToolSessionOpen,
+            this.ToolSessionDelete});
+      this.toolStrip1.Location = new System.Drawing.Point(0, 0);
+      this.toolStrip1.Name = "toolStrip1";
+      this.toolStrip1.Size = new System.Drawing.Size(200, 25);
+      this.toolStrip1.TabIndex = 1;
+      this.toolStrip1.Text = "ToolSession";
+      // 
+      // ToolSessionOpen
+      // 
+      this.ToolSessionOpen.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+      this.ToolSessionOpen.Image = global::SalemCartographer.Properties.Resources.folder_open_solid;
+      this.ToolSessionOpen.ImageTransparentColor = System.Drawing.Color.Magenta;
+      this.ToolSessionOpen.Name = "ToolSessionOpen";
+      this.ToolSessionOpen.Size = new System.Drawing.Size(23, 22);
+      // 
+      // ToolSessionDelete
+      // 
+      this.ToolSessionDelete.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+      this.ToolSessionDelete.Image = global::SalemCartographer.Properties.Resources.trash_solid_24_black;
+      this.ToolSessionDelete.ImageTransparentColor = System.Drawing.Color.Magenta;
+      this.ToolSessionDelete.Name = "ToolSessionDelete";
+      this.ToolSessionDelete.Size = new System.Drawing.Size(23, 22);
+      // 
       // ListSessions
       // 
       this.ListSessions.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -126,7 +156,7 @@ namespace SalemCartographer.App.UI
       this.SplitRight.Panel2.Controls.Add(this.SplitRightHorizontal);
       this.SplitRight.Panel2MinSize = 200;
       this.SplitRight.Size = new System.Drawing.Size(579, 515);
-      this.SplitRight.SplitterDistance = 367;
+      this.SplitRight.SplitterDistance = 365;
       this.SplitRight.SplitterWidth = 5;
       this.SplitRight.TabIndex = 0;
       // 
@@ -135,7 +165,7 @@ namespace SalemCartographer.App.UI
       this.Canvas.Dock = System.Windows.Forms.DockStyle.Fill;
       this.Canvas.Location = new System.Drawing.Point(0, 0);
       this.Canvas.Name = "Canvas";
-      this.Canvas.Size = new System.Drawing.Size(367, 515);
+      this.Canvas.Size = new System.Drawing.Size(365, 515);
       this.Canvas.TabIndex = 0;
       this.Canvas.Text = "graphicCanvas1";
       // 
@@ -157,7 +187,7 @@ namespace SalemCartographer.App.UI
       this.SplitRightHorizontal.Panel2.Controls.Add(this.ListPoi);
       this.SplitRightHorizontal.Panel2.Controls.Add(this.ToolPoi);
       this.SplitRightHorizontal.Panel2MinSize = 100;
-      this.SplitRightHorizontal.Size = new System.Drawing.Size(207, 515);
+      this.SplitRightHorizontal.Size = new System.Drawing.Size(209, 515);
       this.SplitRightHorizontal.SplitterDistance = 250;
       this.SplitRightHorizontal.TabIndex = 0;
       // 
@@ -168,7 +198,7 @@ namespace SalemCartographer.App.UI
       this.ListMaps.ItemHeight = 20;
       this.ListMaps.Location = new System.Drawing.Point(0, 25);
       this.ListMaps.Name = "ListMaps";
-      this.ListMaps.Size = new System.Drawing.Size(207, 225);
+      this.ListMaps.Size = new System.Drawing.Size(209, 225);
       this.ListMaps.TabIndex = 0;
       // 
       // ToolMaps
@@ -176,10 +206,11 @@ namespace SalemCartographer.App.UI
       this.ToolMaps.AllowMerge = false;
       this.ToolMaps.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.ToolMapsAdd,
+            this.ToolMapsOpen,
             this.ToolMapsDelete});
       this.ToolMaps.Location = new System.Drawing.Point(0, 0);
       this.ToolMaps.Name = "ToolMaps";
-      this.ToolMaps.Size = new System.Drawing.Size(207, 25);
+      this.ToolMaps.Size = new System.Drawing.Size(209, 25);
       this.ToolMaps.TabIndex = 0;
       this.ToolMaps.Text = "toolStrip1";
       // 
@@ -190,6 +221,14 @@ namespace SalemCartographer.App.UI
       this.ToolMapsAdd.ImageTransparentColor = System.Drawing.Color.Magenta;
       this.ToolMapsAdd.Name = "ToolMapsAdd";
       this.ToolMapsAdd.Size = new System.Drawing.Size(23, 22);
+      // 
+      // ToolMapsOpen
+      // 
+      this.ToolMapsOpen.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+      this.ToolMapsOpen.Image = global::SalemCartographer.Properties.Resources.folder_open_solid;
+      this.ToolMapsOpen.ImageTransparentColor = System.Drawing.Color.Magenta;
+      this.ToolMapsOpen.Name = "ToolMapsOpen";
+      this.ToolMapsOpen.Size = new System.Drawing.Size(23, 22);
       // 
       // ToolMapsDelete
       // 
@@ -206,43 +245,24 @@ namespace SalemCartographer.App.UI
       this.ListPoi.ItemHeight = 20;
       this.ListPoi.Location = new System.Drawing.Point(0, 25);
       this.ListPoi.Name = "ListPoi";
-      this.ListPoi.Size = new System.Drawing.Size(207, 236);
+      this.ListPoi.Size = new System.Drawing.Size(209, 236);
       this.ListPoi.TabIndex = 1;
       // 
       // ToolPoi
       // 
       this.ToolPoi.Location = new System.Drawing.Point(0, 0);
       this.ToolPoi.Name = "ToolPoi";
-      this.ToolPoi.Size = new System.Drawing.Size(207, 25);
+      this.ToolPoi.Size = new System.Drawing.Size(209, 25);
       this.ToolPoi.TabIndex = 0;
       this.ToolPoi.Text = "toolStrip2";
       // 
-      // toolStrip1
+      // ToolSessionMerge
       // 
-      this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.ToolSessionOpen,
-            this.ToolSessionDelete});
-      this.toolStrip1.Location = new System.Drawing.Point(0, 0);
-      this.toolStrip1.Name = "toolStrip1";
-      this.toolStrip1.Size = new System.Drawing.Size(200, 25);
-      this.toolStrip1.TabIndex = 1;
-      this.toolStrip1.Text = "ToolSession";
-      // 
-      // ToolSessionOpen
-      // 
-      this.ToolSessionOpen.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-      this.ToolSessionOpen.Image = global::SalemCartographer.Properties.Resources.folder_open_solid;
-      this.ToolSessionOpen.ImageTransparentColor = System.Drawing.Color.Magenta;
-      this.ToolSessionOpen.Name = "ToolSessionOpen";
-      this.ToolSessionOpen.Size = new System.Drawing.Size(23, 22);
-      // 
-      // ToolSessionDelete
-      // 
-      this.ToolSessionDelete.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-      this.ToolSessionDelete.Image = global::SalemCartographer.Properties.Resources.trash_solid_24_black;
-      this.ToolSessionDelete.ImageTransparentColor = System.Drawing.Color.Magenta;
-      this.ToolSessionDelete.Name = "ToolSessionDelete";
-      this.ToolSessionDelete.Size = new System.Drawing.Size(23, 22);
+      this.ToolSessionMerge.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+      this.ToolSessionMerge.Image = global::SalemCartographer.Properties.Resources.object_group_regular_24_black;
+      this.ToolSessionMerge.ImageTransparentColor = System.Drawing.Color.Magenta;
+      this.ToolSessionMerge.Name = "ToolSessionMerge";
+      this.ToolSessionMerge.Size = new System.Drawing.Size(23, 22);
       // 
       // MainForm
       // 
@@ -262,6 +282,8 @@ namespace SalemCartographer.App.UI
       this.SplitLeft.Panel2.ResumeLayout(false);
       ((System.ComponentModel.ISupportInitialize)(this.SplitLeft)).EndInit();
       this.SplitLeft.ResumeLayout(false);
+      this.toolStrip1.ResumeLayout(false);
+      this.toolStrip1.PerformLayout();
       this.SplitRight.Panel1.ResumeLayout(false);
       this.SplitRight.Panel2.ResumeLayout(false);
       ((System.ComponentModel.ISupportInitialize)(this.SplitRight)).EndInit();
@@ -274,8 +296,6 @@ namespace SalemCartographer.App.UI
       this.SplitRightHorizontal.ResumeLayout(false);
       this.ToolMaps.ResumeLayout(false);
       this.ToolMaps.PerformLayout();
-      this.toolStrip1.ResumeLayout(false);
-      this.toolStrip1.PerformLayout();
       this.ResumeLayout(false);
       this.PerformLayout();
 
@@ -299,6 +319,8 @@ namespace SalemCartographer.App.UI
     private System.Windows.Forms.ToolStrip toolStrip1;
     private System.Windows.Forms.ToolStripButton ToolSessionOpen;
     private System.Windows.Forms.ToolStripButton ToolSessionDelete;
+    private System.Windows.Forms.ToolStripButton ToolMapsOpen;
+    private System.Windows.Forms.ToolStripButton ToolSessionMerge;
   }
 }
 

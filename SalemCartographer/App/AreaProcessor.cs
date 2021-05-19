@@ -8,7 +8,7 @@ using SalemCartographer.App.Model;
 
 namespace SalemCartographer.App
 {
-  class AreaProcessor : IProcessor<AreaDto>
+  internal class AreaProcessor : IProcessor<AreaDto>
   {
     protected string AreaPath { get; set; }
     protected bool Valid { get; set; }
@@ -40,7 +40,7 @@ namespace SalemCartographer.App
     public static AreaDto BuildDto(String areaPath) {
       string name = areaPath != null ? Path.GetFileName(areaPath) : areaPath;
       AreaDto Area = new() {
-        Path = areaPath,
+        Path = Configuration.finalizePath(areaPath),
         Name = name,
         Directory = name,
       };
@@ -60,6 +60,5 @@ namespace SalemCartographer.App
         }
       }
     }
-
   }
 }
