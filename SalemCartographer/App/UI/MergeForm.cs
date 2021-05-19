@@ -31,7 +31,7 @@ namespace SalemCartographer.App.UI
     }
 
     protected void OnLoad(Object sender, EventArgs ev) {
-      if (targetAreas.Count() == 0) {
+      if (!targetAreas.Any()) {
         DialogResult = DialogResult.Abort;
         Close();
         return;

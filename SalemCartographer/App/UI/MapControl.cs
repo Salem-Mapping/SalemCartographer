@@ -49,17 +49,20 @@ namespace SalemCartographer.App.UI
 
     // selection
     public bool AllowSelection = true;
+
     public Color SelectionColor = Color.DarkViolet;
 
     public event EventHandler SelectionChanged;
 
     // control vars
     private Rectangle ControlCanvas;
+
     private Point ControlCenter;
     private DateTime LastPaint;
 
     // area vars
     private AreaDto area;
+
     private Point areaCenter;
     private Size tileSize = new(SIZE_TILE, SIZE_TILE);
     private Rectangle imageRect = new(new(0, 0), new(SIZE_TILE, SIZE_TILE));
@@ -68,6 +71,7 @@ namespace SalemCartographer.App.UI
 
     // status vars
     private MouseButtons MouseButton;
+
     private Point MouseLast;
 
     public MapControl() {
@@ -317,6 +321,5 @@ namespace SalemCartographer.App.UI
       Point Center = CalcCenter();
       return new(Center.X + (Position.X * SIZE_TILE), Center.Y + (Position.Y * SIZE_TILE));
     }
-
   }
 }

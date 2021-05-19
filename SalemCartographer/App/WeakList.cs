@@ -15,7 +15,7 @@ namespace SalemCartographer.App
     /// <summary>
     ///     The backing object is just a list of weak references
     /// </summary>
-    private List<WeakReference<T>> _list = new List<WeakReference<T>>();
+    private readonly List<WeakReference<T>> _list = new();
 
     #region IList
 
@@ -60,8 +60,7 @@ namespace SalemCartographer.App
       }
       set {
         if (index < 0 || index >= _list.Count) { return; }
-        var v = value as T;
-        if (v != null) { _list[index].SetTarget(v); }
+        if (value is T v) { _list[index].SetTarget(v); }
       }
     }
 
@@ -80,8 +79,7 @@ namespace SalemCartographer.App
     /// <param name="item">The item to check</param>
     /// <returns>true if the list contains the item</returns>
     public bool Contains(object value) {
-      var v = value as T;
-      if (v == null) { return false; }
+      if (value is not T v) { return false; }
       return Contains(v);
     }
 
@@ -91,8 +89,7 @@ namespace SalemCartographer.App
     /// <param name="item">The item to find</param>
     /// <returns>The index or -1</returns>
     public int IndexOf(object value) {
-      var v = value as T;
-      if (v == null) { return -1; }
+      if (value is not T v) { return -1; }
       return IndexOf(v);
     }
 
@@ -102,8 +99,7 @@ namespace SalemCartographer.App
     /// <param name="index">The index to insert at</param>
     /// <param name="value">The value to insert</param>
     public void Insert(int index, object value) {
-      var v = value as T;
-      if (v == null) { return; }
+      if (value is not T v) { return; }
       lock (SyncRoot) {
         _list.Insert(index, new WeakReference<T>(v));
       }
@@ -177,8 +173,7 @@ namespace SalemCartographer.App
     /// <param name="index">The index to insert at</param>
     /// <param name="item">The item to insert</param>
     public void Insert(int index, T item) {
-      var v = item as T;
-      if (v == null) { return; }
+      if (item is not T v) { return; }
       lock (SyncRoot) {
         _list.Insert(index, new WeakReference<T>(v));
       }

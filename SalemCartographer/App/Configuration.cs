@@ -6,15 +6,15 @@ namespace SalemCartographer.App
   {
     private static readonly Properties.Settings Settings = Properties.Settings.Default;
 
-    public static string GetSessionsPath() => finalizePath(Settings.PathSession);
+    public static string GetSessionsPath() => FinalizePath(Settings.PathSession);
 
-    public static string GetCartographerPath() => finalizePath(Settings.PathCartographer);
+    public static string GetCartographerPath() => FinalizePath(Settings.PathCartographer);
 
     public static bool IsFilterSessionActive() => Settings.FilterSessions;
 
     public static int GetFilterSessionTileMinCount() => Settings.FilterSessionTileMinCount;
 
-    public static string finalizePath(string Path) {
+    public static string FinalizePath(string Path) {
       if (Path.Contains("%")) {
         Path = Environment.ExpandEnvironmentVariables(Path);
       }

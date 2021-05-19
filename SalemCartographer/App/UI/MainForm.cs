@@ -90,6 +90,7 @@ namespace SalemCartographer.App.UI
         case DialogResult.Yes:
           WorldController.Instance.Merge(form.SourceArea, form.TargetArea, form.Offset);
           break;
+
         case DialogResult.None:
         case DialogResult.Cancel:
         case DialogResult.Abort:
@@ -102,6 +103,7 @@ namespace SalemCartographer.App.UI
     }
 
 #nullable enable
+
     private AreaDto? GetSelectedSession() {
       return GetSelectedArea(ListSessions);
     }
@@ -121,6 +123,7 @@ namespace SalemCartographer.App.UI
         return null;
       }
     }
+
 #nullable disable
 
     protected void OnToolOpen(Object sender, EventArgs e) {
@@ -149,15 +152,17 @@ namespace SalemCartographer.App.UI
       }
       if (area == null) {
         MessageBox.Show("select a area, first!");
-        return; 
+        return;
       }
       switch (area.Type) {
         case Enum.AreaType.World:
           WorldController.Instance.Delete(area);
           break;
+
         case Enum.AreaType.Session:
           SessionController.Instance.Delete(area);
           break;
+
         case Enum.AreaType.Preview:
         default:
           break;

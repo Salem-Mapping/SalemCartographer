@@ -15,6 +15,7 @@ namespace SalemCartographer.App.Model
     public string Directory { get; set; }
     public string Hash { get; set; }
     public Dictionary<string, TileDto> Tiles { get; protected set; }
+
     // transient
     public AreaType Type { get; set; }
 
@@ -43,7 +44,6 @@ namespace SalemCartographer.App.Model
     }
 
     public AreaDto() : this(AreaType.Preview) {
-
     }
 
     public AreaDto(AreaDto dto) : this(dto.Type) {
@@ -73,7 +73,7 @@ namespace SalemCartographer.App.Model
       return Tiles.Remove(dto.GetKey());
     }
 
-    public void clearTiles() {
+    public void ClearTiles() {
       Tiles.Clear();
       Checksums.Clear();
     }
@@ -117,6 +117,5 @@ namespace SalemCartographer.App.Model
     public override int GetHashCode() {
       return Path.GetHashCode();
     }
-
   }
 }

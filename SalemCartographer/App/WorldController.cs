@@ -23,6 +23,7 @@ namespace SalemCartographer.App
         return _Instance;
       }
     }
+
     public override event EventHandler DataChanged;
 
     public override string DirectoryPath => Configuration.GetCartographerPath();
@@ -138,7 +139,7 @@ namespace SalemCartographer.App
 
     protected bool Create(string areaName, AreaDto newArea) {
       string worldPath = DirectoryPath;
-      string worldAreaPath = Configuration.finalizePath(worldPath + SecurePath(areaName));
+      string worldAreaPath = Configuration.FinalizePath(worldPath + SecurePath(areaName));
       if (newArea.Type == Type || newArea.Path.StartsWith(worldPath)) {
         return false;
       }

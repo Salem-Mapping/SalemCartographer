@@ -2,15 +2,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Timers;
 using Timer = System.Timers.Timer;
 
 namespace SalemCartographer.App
 {
-  class FileSystemMonitor : IDisposable
+  internal class FileSystemMonitor : IDisposable
   {
     public event EventHandler<DataEventArgs<List<FileSystemEventArgs>>> ChangedBulk;
 
@@ -32,6 +30,7 @@ namespace SalemCartographer.App
         }
       }
     }
+
     public string Filter {
       get => filter; set {
         filter = value;
@@ -40,6 +39,7 @@ namespace SalemCartographer.App
         }
       }
     }
+
     public bool IncludeSubdirectories {
       get => includeSubdirectories; set {
         includeSubdirectories = value;
@@ -48,6 +48,7 @@ namespace SalemCartographer.App
         }
       }
     }
+
     public bool EnableRaisingEvents {
       get => enableRaisingEvents; set {
         enableRaisingEvents = value;
@@ -56,6 +57,7 @@ namespace SalemCartographer.App
         }
       }
     }
+
     public NotifyFilters NotifyFilter {
       get => notifyFilter; set {
         notifyFilter = value;
@@ -76,8 +78,6 @@ namespace SalemCartographer.App
     private bool enableRaisingEvents;
     private NotifyFilters notifyFilter;
 
-
-
     public FileSystemMonitor(string path, string filter) {
       this.path = path;
       this.filter = filter;
@@ -96,7 +96,7 @@ namespace SalemCartographer.App
         watcher.Error -= Watcher_Error;
         watcher.Dispose();
       }
-      watcher = new ();
+      watcher = new();
       watcher.Path = path;
       watcher.Filter = filter;
       watcher.Changed += Watcher_FileChanged;
@@ -129,7 +129,6 @@ namespace SalemCartographer.App
       // Watcher crashed. Re-init.
       InitFileSystemWatcher();
     }
-
 
     private void ProcessQueue(object sender, ElapsedEventArgs args) {
       try {

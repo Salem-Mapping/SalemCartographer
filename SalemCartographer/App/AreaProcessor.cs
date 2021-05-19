@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using SalemCartographer.App.Model;
+using System;
 using System.IO;
-using SalemCartographer.App.Model;
 
 namespace SalemCartographer.App
 {
@@ -40,7 +36,7 @@ namespace SalemCartographer.App
     public static AreaDto BuildDto(String areaPath) {
       string name = areaPath != null ? Path.GetFileName(areaPath) : areaPath;
       AreaDto Area = new() {
-        Path = Configuration.finalizePath(areaPath),
+        Path = Configuration.FinalizePath(areaPath),
         Name = name,
         Directory = name,
       };

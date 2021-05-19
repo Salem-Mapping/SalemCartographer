@@ -77,9 +77,8 @@ namespace SalemCartographer.App
     }
 
     private static byte[] GetHashSha256(string filename) {
-      using (FileStream stream = File.OpenRead(filename)) {
-        return Sha256.ComputeHash(stream);
-      }
+      using FileStream stream = File.OpenRead(filename);
+      return Sha256.ComputeHash(stream);
     }
 
     private static string BytesToString(byte[] bytes) {

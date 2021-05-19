@@ -16,6 +16,7 @@ namespace SalemCartographer.App
 
     public abstract string DirectoryPath { get; }
     public abstract AreaType Type { get; }
+
     public abstract event EventHandler DataChanged;
 
     protected void RefreshAreas(Dictionary<string, AreaDto> Areas, string DirectoryPath) {
@@ -65,6 +66,5 @@ namespace SalemCartographer.App
         .Select(ch => invalidFileNameChars.Contains(ch) ? '_' : ch)
         .ToArray());
     }
-
   }
 }
