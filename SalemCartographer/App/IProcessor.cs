@@ -1,8 +1,10 @@
 ﻿namespace SalemCartographer.App
 {
-  internal interface IProcessor<DTO>
+  public interface IProcessor<DTO>
   {
-    void SetPath(string Path);
+    void SetPath(string path);
+
+    void SetDto(DTO dto);
 
     bool IsValid();
 

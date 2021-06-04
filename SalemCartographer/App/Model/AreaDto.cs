@@ -1,45 +1,62 @@
 using SalemCartographer.App.Enum;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
+using System.Text.Json.Serialization;
 
 namespace SalemCartographer.App.Model
 {
-  public class AreaDto : IDisposable
+  public class AreaDto : AbstractModel
   {
     public const string FIELD_TITLE = "DisplayString";
-    public const string FORMAT_TITLE = "{0} ({1}) [{2}]";
+    public const string FORMAT_TITLE = "{0} ({1}) [{2}] {3}";
     public const string FORMAT_DIMENSION = "{0}x{1}";
 
-    public string Path { get; set; }
-    public string Directory { get; set; }
-    public string Hash { get; set; }
-    public Dictionary<string, TileDto> Tiles { get; protected set; }
+    // serialize
+    [JsonInclude]
+    public string Name;
+    [JsonInclude]
+    public string Path;
+    [JsonInclude]
+    public string Directory;
+    [JsonInclude]
+    public string Hash;
+    [JsonInclude]
+    public Dictionary<string, TileDto> Tiles { get => tiles ??= new(); protected set => tiles = value; }
 
     // transient
+    [JsonIgnore]
+    public Point? LastLocation;
+    [JsonIgnore]
+    private Dictionary<string, TileDto> tiles;
+    [JsonIgnore]
     public AreaType Type { get; set; }
-
-    // transient
-    public Dictionary<string, TileDto> Checksums { get; protected set; }
-
-    // transient
+    [JsonIgnore]
+    public Point? Offset;
+    [JsonIgnore]
+    public float? Score;
+    [JsonIgnore]
+    public float? ScoreNormalized;
+    [JsonIgnore]
+    public List<AreaDto> MatchingAreas;
+    [JsonIgnore]
+    public Dictionary<string, TileDto> Hashes { get; protected set; }
+    [JsonIgnore]
     public List<TileDto> TileList {
       get {
-        return Tiles.Values.ToList();
+        lock (Tiles) {
+          return Tiles.Values.ToList();
+        }
       }
     }
-
-    public string DisplayString {
-      get {
-        return string.Format(FORMAT_TITLE, Name, Tiles.Count, GetDimensions());
-      }
-    }
-
-    public string Name { get; internal set; }
+    [JsonIgnore]
+    public string DisplayString => string.Format(FORMAT_TITLE, Name, Tiles.Count, GetDimensions(), ScoreNormalized);
 
     public AreaDto(AreaType type) {
       Tiles = new();
-      Checksums = new();
+      Hashes = new();
+      MatchingAreas = new();
       Type = type;
     }
 
@@ -52,30 +69,77 @@ namespace SalemCartographer.App.Model
       Directory = dto.Directory;
       Hash = dto.Hash;
       Type = dto.Type;
-      Tiles = dto.Tiles.Values.ToDictionary(t => t.GetKey(), t => new TileDto(t));
+      Score = dto.Score;
+      ScoreNormalized = dto.ScoreNormalized;
+      lock (dto.Tiles) {
+        Tiles = dto.Tiles.Values.ToDictionary(t => t.Key, t => new TileDto(t));
+        if (Tiles == null) {
+          Tiles = new();
+        }
+      }
     }
 
     public virtual void AddTile(TileDto dto) {
-      string key = dto.GetKey();
+      if (dto == null) {
+        return;
+      }
+      string key = dto.Key;
       if (Tiles.ContainsKey(key)) {
         RemoveTile(dto);
       }
-      Tiles.Add(key, dto);
-      if (dto.Checksum != null) {
-        Checksums[dto.Checksum] = dto;
+      lock (Tiles) {
+        Tiles[key] = dto;
       }
+      if (dto.Hash != null) {
+        lock (Hashes) {
+          Hashes[dto.Hash] = dto;
+        }
+      }
+    }
+
+    public void AddTile(TileDto dto, float? score) {
+      if (dto == null) {
+        return;
+      }
+      dto.Score = score;
+      AddTile(dto);
     }
 
     public virtual bool RemoveTile(TileDto dto) {
-      if (dto.Checksum != null) {
-        Checksums.Remove(dto.Checksum);
+      if (dto.Hash != null) {
+        lock (Hashes) {
+          Hashes.Remove(dto.Hash);
+        }
       }
-      return Tiles.Remove(dto.GetKey());
+      lock (Tiles) {
+        return Tiles.Remove(dto.Key);
+      }
+    }
+
+    public virtual TileDto GetTile(Point pos) {
+      return GetTile(pos.X, pos.Y);
+    }
+
+    public virtual TileDto GetTile(int x, int y) {
+      return GetTileByKey(String.Format(AppConstants.TileKeyFormat, x, y));
+    }
+
+    public virtual TileDto GetTileByKey(string key) {
+      lock (Tiles) {
+        if (Tiles.ContainsKey(key)) {
+          return Tiles[key];
+        }
+      }
+      return null;
     }
 
     public void ClearTiles() {
-      Tiles.Clear();
-      Checksums.Clear();
+      lock (Tiles) {
+        Tiles.Clear();
+      }
+      lock (Hashes) {
+        Hashes.Clear();
+      }
     }
 
     public string GetDimensions() {
@@ -83,28 +147,17 @@ namespace SalemCartographer.App.Model
       int posXMax = 0;
       int posYMin = 0;
       int posYMax = 0;
-      foreach (var Tile in Tiles.Values) {
-        posXMin = Math.Min(posXMin, Tile.PosX);
-        posXMax = Math.Max(posXMax, Tile.PosX);
-        posYMin = Math.Min(posYMin, Tile.PosY);
-        posYMax = Math.Max(posYMax, Tile.PosY);
+      lock (Tiles) {
+        foreach (var Tile in Tiles.Values) {
+          posXMin = Math.Min(posXMin, Tile.X);
+          posXMax = Math.Max(posXMax, Tile.X);
+          posYMin = Math.Min(posYMin, Tile.Y);
+          posYMax = Math.Max(posYMax, Tile.Y);
+        }
       }
       int x = Math.Abs(posXMin - posXMax) + 1;
       int y = Math.Abs(posYMin - posYMax) + 1;
       return String.Format(FORMAT_DIMENSION, x, y);
-    }
-
-    protected virtual void Dispose(bool disposing) {
-      if (disposing) {
-        foreach (var tile in TileList) {
-          tile.Dispose();
-        }
-      }
-    }
-
-    public void Dispose() {
-      Dispose(disposing: true);
-      GC.SuppressFinalize(this);
     }
 
     public override bool Equals(object obj) {

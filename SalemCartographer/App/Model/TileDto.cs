@@ -1,71 +1,77 @@
 using System;
+using System.Diagnostics;
 using System.Drawing;
+using System.IO;
+using System.Text.Json.Serialization;
+using System.Windows.Media.Imaging;
 
 namespace SalemCartographer.App.Model
 {
-  public class TileDto : IDisposable
+  public class TileDto : AbstractModel
   {
-    public const string KEY_FORMAT = "{0}_{1}";
+    private const string FormatKey = AppConstants.TileKeyFormat;
 
-    // permanent
+    // serialize
+    [JsonInclude]
     public string Path { get; set; }
-
-    public int PosX { get; set; }
-    public int PosY { get; set; }
-    public string Checksum { get; set; }
+    [JsonInclude]
+    public int X { get; set; }
+    [JsonInclude]
+    public int Y { get; set; }
+    [JsonInclude]
+    public string Hash { get; set; }
+    [JsonInclude]
     public string FileName { get; set; }
+    [JsonInclude]
     public long Size { get; set; }
+    [JsonInclude]
     public DateTime Date { get; set; }
 
     // transient
+    [JsonIgnore]
+    public string Key => String.Format(FormatKey, X, Y);
+    [JsonIgnore]
+    public float? Score;
+    [JsonIgnore]
     public Point Coordinate {
-      get => new(PosX, PosY);
+      get => new(X, Y);
       set {
-        PosX = value.X;
-        PosY = value.Y;
+        X = value.X;
+        Y = value.Y;
       }
     }
-
-    private WeakReference<Image> _Img;
+    //[JsonIgnore]
+    //private Image image;
+    [JsonIgnore]
+    public Image Image {
+      get {
+        Image image = null;
+        if (image == null && File.Exists(this.Path)) {
+          lock (this) {
+            try {
+              var memStream = new MemoryStream();
+              using FileStream fileStream = new(this.Path, FileMode.Open, FileAccess.Read, FileShare.Delete);
+              fileStream.CopyTo(memStream);
+              image = Image.FromStream(memStream);
+            } catch (Exception) { }
+          }
+        }
+        return image;
+      }
+    }
 
     public TileDto() {
     }
 
     public TileDto(TileDto dto) : this() {
       Path = dto.Path;
-      PosX = dto.PosX;
-      PosY = dto.PosY;
-      Checksum = dto.Checksum;
+      X = dto.X;
+      Y = dto.Y;
+      Hash = dto.Hash;
       FileName = dto.FileName;
       Size = dto.Size;
       Date = dto.Date;
-      _Img = dto._Img;
-    }
-
-    public Image GetImage() {
-      if (_Img == null || !_Img.TryGetTarget(out var target)) {
-        target = Image.FromFile(Path);
-        _Img = new(target);
-      }
-      return target;
-    }
-
-    public string GetKey() {
-      return String.Format(KEY_FORMAT, PosX, PosY);
-    }
-
-    protected virtual void Dispose(bool disposing) {
-      if (disposing) {
-        if (_Img != null && _Img.TryGetTarget(out Image image)) {
-          image.Dispose();
-        }
-        _Img = null;
-      }
-    }
-
-    public void Dispose() {
-      Dispose(disposing: true);
-      GC.SuppressFinalize(this);
+      Score = dto.Score;
     }
   }
 }

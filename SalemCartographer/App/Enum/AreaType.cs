@@ -2,6 +2,6 @@
 {
   public enum AreaType
   {
-    World, Session, Preview
+    Preview, World, Session
   }
 }

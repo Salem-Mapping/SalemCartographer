@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SalemCartographer.App.Utils;
+using System;
 
 namespace SalemCartographer.App
 {
@@ -6,22 +7,21 @@ namespace SalemCartographer.App
   {
     private static readonly Properties.Settings Settings = Properties.Settings.Default;
 
-    public static string GetSessionsPath() => FinalizePath(Settings.PathSession);
+    public static string GetSessionsPath() => PathUtils.FinalizePath(Settings.PathSession);
 
-    public static string GetCartographerPath() => FinalizePath(Settings.PathCartographer);
+    public static string GetCartographerPath() => PathUtils.FinalizePath(Settings.PathCartographer);
+
+    public static double GetAutoMergeMinScore() => 3;
+
+    public static double GetAutoMergeMinScoreNormalized() => 0.8;
+
+    public static bool LiveMergeEnabled() => true;
+
+    public static bool ShouldDeleteMineTiles() => true;
 
     public static bool IsFilterSessionActive() => Settings.FilterSessions;
 
     public static int GetFilterSessionTileMinCount() => Settings.FilterSessionTileMinCount;
 
-    public static string FinalizePath(string Path) {
-      if (Path.Contains("%")) {
-        Path = Environment.ExpandEnvironmentVariables(Path);
-      }
-      if (!Path.EndsWith(System.IO.Path.DirectorySeparatorChar.ToString())) {
-        Path += System.IO.Path.DirectorySeparatorChar;
-      }
-      return Path;
-    }
   }
 }

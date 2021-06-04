@@ -1,72 +1,96 @@
 ﻿using SalemCartographer.App.Enum;
 using SalemCartographer.App.Model;
 using SalemCartographer.App.UI;
+using SalemCartographer.App.Utils;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace SalemCartographer.App
 {
-  internal class WorldController : AreaController
+  internal class WorldController : AbstractAreaController
   {
-    private static WorldController _Instance;
-
+    private static WorldController instance;
+    private static readonly object intanceLock = new();
     public static WorldController Instance {
       get {
-        if (_Instance == null) {
-          _Instance = new WorldController();
+        lock (intanceLock) {
+          if (instance == null) {
+            instance = new WorldController();
+          }
         }
-        return _Instance;
+        return instance;
       }
     }
 
-    public override event EventHandler DataChanged;
+    public static string worldMapsDirectoryName = "maps";
 
-    public override string DirectoryPath => Configuration.GetCartographerPath();
+    public override IDictionary<string, AreaDto> Areas => World.Areas;
+    public override string DirectoryPath => PathUtils.FinalizePath(Configuration.GetCartographerPath() + worldMapsDirectoryName);
     public override AreaType Type => AreaType.World;
     public WorldDto World;
-    private readonly Dictionary<String, WeakList<AreaDto>> KnownFileHashes;
+
+    private readonly string DataFile = Configuration.GetCartographerPath() + AppConstants.WorldFileName;
+    private readonly Dictionary<String, WeakList<AreaDto>> knownFileHashes;
 
     private WorldController() : base() {
-      World = new();
-      KnownFileHashes = new();
-      Refresh();
+      if (!Directory.Exists(DirectoryPath)) {
+        return;
+      }
+      LoadData();
+      if (World == null) {
+        World = new();
+      }
+      knownFileHashes = new();
+      RefreshAreasAsync();
     }
 
     public void Refresh() {
-      string path = DirectoryPath;
-      if (!Directory.Exists(path)) {
-        return;
-      }
-      RefreshAreas(World.Areas, path);
+      RefreshAreasAsync();
+    }
+
+    protected override void RefreshAreas() {
+      base.RefreshAreas();
       RefreshHashes();
-      DataChanged?.Invoke(this, EventArgs.Empty);
+      StoreData();
     }
 
     protected void RefreshHashes() {
-      KnownFileHashes.Clear();
-      foreach (var area in World.AreaList) {
-        foreach (var tile in area.TileList) {
-          if (!KnownFileHashes.ContainsKey(tile.Checksum)) {
-            KnownFileHashes.Add(tile.Checksum, new WeakList<AreaDto>());
-          }
-          if (!KnownFileHashes[tile.Checksum].Contains(area)) {
-            KnownFileHashes[tile.Checksum].Add(area);
+      lock (knownFileHashes) {
+        knownFileHashes.Clear();
+        foreach (var area in World.AreaList) {
+          foreach (var tile in area.TileList) {
+            if (!knownFileHashes.ContainsKey(tile.Hash)) {
+              knownFileHashes.Add(tile.Hash, new WeakList<AreaDto>());
+            }
+            if (!knownFileHashes[tile.Hash].Contains(area)) {
+              knownFileHashes[tile.Hash].Add(area);
+            }
           }
         }
       }
     }
 
-    public List<MatchedAreaDto> GetKnownAreas(AreaDto area) {
-      List<MatchedAreaDto> matchingAreas = new();
+    public List<AreaDto> GetKnownAreas(AreaDto area) {
+      List<AreaDto> matchingAreas = new();
       ISet<AreaDto> knownAreas = new HashSet<AreaDto>();
-      foreach (var item in area.TileList) {
-        if (KnownFileHashes.ContainsKey(item.Checksum)) {
-          knownAreas.UnionWith(KnownFileHashes[item.Checksum]);
+      lock (knownFileHashes) {
+        if (!knownFileHashes.Any()) {
+          return matchingAreas;
+        }
+        foreach (var item in area.TileList) {
+          if (item.Hash == null) { continue; }
+          if (knownFileHashes.ContainsKey(item.Hash)) {
+            knownAreas.UnionWith(knownFileHashes[item.Hash]);
+          }
         }
       }
       if (knownAreas.Count == 0) {
@@ -74,40 +98,40 @@ namespace SalemCartographer.App
         return matchingAreas;
       }
       foreach (var knownArea in knownAreas) {
-        MatchedAreaDto match = new(knownArea);
+        AreaDto match = new(knownArea);
         float score = 0;
         int count = 0;
         try {
           TileDto tileSource1 = area.TileList
-            .Where(t => knownArea.Checksums.TryGetValue(t.Checksum, out var target))
+            .Where(t => knownArea.Hashes.TryGetValue(t.Hash, out var target))
             .First();
-          TileDto tileMatch1 = knownArea.Checksums[tileSource1.Checksum];
-          Point Offset = new(tileMatch1.PosX - tileSource1.PosX, tileMatch1.PosY - tileSource1.PosY);
+          TileDto tileMatch1 = knownArea.Hashes[tileSource1.Hash];
+          Point Offset = new(tileMatch1.X - tileSource1.X, tileMatch1.Y - tileSource1.Y);
           match.Offset = Offset;
           foreach (var tileSource in area.TileList) {
             try {
               Point p = tileSource.Coordinate;
               p.Offset(Offset);
-              string key = String.Format(TileDto.KEY_FORMAT, p.X, p.Y);
+              string key = String.Format(AppConstants.TileKeyFormat, p.X, p.Y);
               if (!knownArea.Tiles.ContainsKey(key)) {
                 continue;
               }
-              TileDto matchTile = knownArea.Tiles[key];
+              TileDto matchTile = new(knownArea.Tiles[key]);
               count++;
               float sourceTile = TileComparator.Compare(tileSource, matchTile);
               score += sourceTile;
               match.AddTile(matchTile, sourceTile);
             } catch (Exception e) {
-              Debug.WriteLine(e);
+              Debug.WriteLine(this.GetType().Name + ": " + e);
             }
           }
         } catch (Exception e) {
-          Debug.WriteLine(e);
+          Debug.WriteLine(this.GetType().Name + ": " + e);
           score = 0;
         }
         float normalized = score / count;
         Debug.WriteLine(String.Format("Area '{5}' => '{0}' {1} ({2}/{3}) -> {4}", knownArea.Directory, normalized, score, count, match.Offset, area.Directory));
-        if (score > 3 && normalized > 0.8) {
+        if (score > 0.3 && normalized > 0.3) {
           match.Score = score;
           match.ScoreNormalized = normalized;
           matchingAreas.Add(match);
@@ -139,7 +163,7 @@ namespace SalemCartographer.App
 
     protected bool Create(string areaName, AreaDto newArea) {
       string worldPath = DirectoryPath;
-      string worldAreaPath = Configuration.FinalizePath(worldPath + SecurePath(areaName));
+      string worldAreaPath = PathUtils.FinalizePath(worldPath + PathUtils.SecureFileName(areaName));
       if (newArea.Type == Type || newArea.Path.StartsWith(worldPath)) {
         return false;
       }
@@ -151,63 +175,129 @@ namespace SalemCartographer.App
         File.Copy(tile.Path, newFilePath);
       }
       Refresh();
-      DataChanged.Invoke(this, new EventArgs());
       return true;
+    }
+
+    public void AutoMerge(IEnumerable<AreaDto> sessions) {
+      double minScore = Configuration.GetAutoMergeMinScore();
+      double minScoreNormalized = Configuration.GetAutoMergeMinScoreNormalized();
+      foreach (AreaDto session in sessions) {
+        if (session.Type == Type) {
+          continue;
+        }
+
+        if (!session.MatchingAreas.Any()) {
+          session.MatchingAreas = GetKnownAreas(session);
+        }
+        var filteredAreas = session.MatchingAreas
+             .Where(m => m.Score > minScore)
+             .Where(m => m.ScoreNormalized > minScoreNormalized);
+        if (filteredAreas.Count() == 1) {
+          AreaDto area = filteredAreas.Single();
+          Merge(session, area, area.Offset.Value);
+        }
+      }
+    }
+
+    private CancellationTokenSource cancelAutoMerge;
+    public async void AutoMergeAsync(IEnumerable<AreaDto> sessions) {
+      CancelAutoMergeAsync();
+      cancelAutoMerge = new();
+      try {
+        await Task.Run(() => AutoMerge(sessions), cancelAutoMerge.Token);
+      } catch (Exception) { }
+    }
+    protected void CancelAutoMergeAsync() {
+      if (cancelAutoMerge != null) {
+        cancelAutoMerge.Cancel();
+        cancelAutoMerge = null;
+      }
     }
 
     public bool Merge(AreaDto sourceArea, AreaDto targetArea, Point offset) {
       Stopwatch watch = new();
       watch.Start();
-      bool result = false;
-      if (sourceArea.Type == Type || targetArea.Type != Type
-        || !World.Areas.ContainsKey(targetArea.Directory)) {
-        return result;
+      bool changed = false;
+      if (sourceArea.Type == Type || !World.Areas.ContainsKey(targetArea.Directory)) {
+        return changed;
       }
       AreaDto orginalArea = World.Areas[targetArea.Directory];
-      string targetPath = orginalArea.Path;
-
       try {
         foreach (var sourceTile in sourceArea.TileList) {
-          TileDto newTile = new(sourceTile);
-          Point coord = sourceTile.Coordinate;
-          coord.Offset(offset);
-          newTile.Coordinate = coord;
-          if (!File.Exists(sourceTile.Path)) {
-            continue;
-          }
-          TileDto orginalTile = null;
-          if (orginalArea.Tiles.ContainsKey(newTile.GetKey())) {
-            orginalTile = orginalArea.Tiles[newTile.GetKey()];
-            orginalTile.Dispose();
-          }
-          newTile.FileName = TileProcessor.GenerateFileName(newTile);
-          newTile.Path = targetPath + newTile.FileName;
-          File.Copy(sourceTile.Path, newTile.Path, true);
-          if (orginalTile != null) {
-            orginalArea.RemoveTile(orginalTile);
-          }
-          orginalArea.AddTile(newTile);
-          result = true;
+          TileDto newTile = MergeTile(sourceTile, orginalArea, offset);
+          if (newTile != null) { newTile.Score = null; }
+          changed = changed || newTile != null;
+        }
+      } catch (Exception e) {
+        Debug.WriteLine(this.GetType().Name + ": " + e);
+      }
+      if (changed) {
+        Refresh();
+      }
+      Debug.WriteLine("merge finished after {0} ms", watch.ElapsedMilliseconds);
+      watch.Stop();
+      return changed;
+    }
+
+    public TileDto MergeTile(TileDto sourceTile, AreaDto targetArea, Point offset) {
+      TileDto newTile = new(sourceTile);
+      Point coord = sourceTile.Coordinate;
+      coord.Offset(offset);
+      newTile.Coordinate = coord;
+      if (!File.Exists(sourceTile.Path)) {
+        return null;
+      }
+      TileDto orginalTile = targetArea.GetTileByKey(newTile.Key);
+      if (orginalTile != null && sourceTile.Date <= orginalTile.Date) {
+        return null;
+      }
+      newTile.FileName = TileProcessor.GenerateFileName(newTile);
+      newTile.Path = targetArea.Path + newTile.FileName;
+      lock (sourceTile) {
+        File.Copy(sourceTile.Path, newTile.Path, true);
+      }
+      if (orginalTile != null) {
+        targetArea.RemoveTile(orginalTile);
+      }
+      targetArea.AddTile(newTile);
+      return newTile;
+    }
+
+    public bool Delete(AreaDto area) {
+      return DeleteArea(area);
+    }
+
+    protected void StoreData() {
+      try {
+        WorldDto data = new(World);
+        string json = JsonSerializer.Serialize(World);
+        if (!String.IsNullOrWhiteSpace(json)) {
+          File.WriteAllText(DataFile, json);
+          Debug.WriteLine("===> data stored");
         }
       } catch (Exception e) {
         Debug.WriteLine(e);
       }
-      if (result) {
-        Refresh();
-        if (sourceArea.Type == AreaType.Session) {
-          SessionController.Instance.Delete(sourceArea);
-        }
-      }
-      Debug.WriteLine("merge finished after {0} ms", watch.ElapsedMilliseconds);
-      watch.Stop();
-      return result;
     }
 
-    public bool Delete(AreaDto area) {
-      if (World.Areas.ContainsKey(area.Directory)) {
-        World.Areas.Remove(area.Directory);
+    protected void LoadData() {
+      try {
+        if (File.Exists(DataFile)) {
+          string json = File.ReadAllText(DataFile);
+          if (!String.IsNullOrWhiteSpace(json)) {
+            WorldDto data = JsonSerializer.Deserialize<WorldDto>(json);
+            if (data != null) {
+              World = data;
+            }
+          }
+        }
+        if (World == null) {
+          World = new();
+        }
+      } catch (Exception e) {
+        Debug.WriteLine(e);
       }
-      return DeleteArea(area);
     }
+
   }
 }

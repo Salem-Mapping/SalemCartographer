@@ -1,12 +1,16 @@
 ﻿using SalemCartographer.App.Model;
+using SalemCartographer.App.Utils;
 using System;
+using System.Diagnostics;
+using System.Drawing;
 using System.IO;
+using System.Text.Json;
 
 namespace SalemCartographer.App
 {
-  internal class AreaProcessor : IProcessor<AreaDto>
+  public class AreaProcessor : IProcessor<AreaDto>
   {
-    protected string AreaPath { get; set; }
+    protected AreaDto area;
     protected bool Valid { get; set; }
 
     public AreaProcessor() {
@@ -16,13 +20,19 @@ namespace SalemCartographer.App
       SetPath(path);
     }
 
+    public void SetDto(AreaDto dto) {
+      area = dto;
+      Validate();
+    }
+
     public void SetPath(string path) {
-      AreaPath = path;
+      area = BuildDto(path);
       Validate();
     }
 
     private void Validate() {
-      Valid = Directory.Exists(AreaPath);
+      Valid = Directory.Exists(area.Path);
+      RefreshDto(area);
     }
 
     public bool IsValid() {
@@ -30,17 +40,24 @@ namespace SalemCartographer.App
     }
 
     public AreaDto GetDto() {
-      return BuildDto(AreaPath);
+      return area;
     }
 
     public static AreaDto BuildDto(String areaPath) {
-      string name = areaPath != null ? Path.GetFileName(areaPath) : areaPath;
-      AreaDto Area = new() {
-        Path = Configuration.FinalizePath(areaPath),
-        Name = name,
-        Directory = name,
-      };
-      return Area;
+      string path = areaPath.EndsWith(Path.DirectorySeparatorChar) ? areaPath[0..^1] : areaPath;
+      AreaDto area = null;
+      if (Directory.Exists(path)) {
+        area = Load(path);
+      }
+      if (area == null) {
+        string name = Path.GetFileName(path);
+        area = new() {
+          Path = PathUtils.FinalizePath(areaPath),
+          Name = name,
+          Directory = name,
+        };
+      }
+      return area;
     }
 
     public static void RefreshDto(AreaDto area) {
@@ -48,13 +65,48 @@ namespace SalemCartographer.App
         return;
       }
       TileProcessor tileProcessor = new();
-      string[] files = Directory.GetFiles(area.Path);
+      string[] files = Directory.GetFiles(area.Path, AppConstants.TileSearchFilter);
       foreach (var file in files) {
-        tileProcessor.SetPath(file);
+        TileDto tile = area.GetTile(TileProcessor.ParseFileName(file));
+        if (tile != null && tile is TileDto) {
+          tileProcessor.SetDto(tile);
+        } else {
+          tileProcessor.SetPath(file);
+        }
         if (tileProcessor.IsValid()) {
           area.AddTile(tileProcessor.GetDto());
         }
       }
+      Store(area);
     }
+
+    public static void Store(AreaDto area) {
+      try {
+        AreaDto data = new(area);
+        string dataFile = PathUtils.FinalizePath(area.Path) + AppConstants.WorldFileName;
+        string json = JsonSerializer.Serialize(area);
+        if (!String.IsNullOrWhiteSpace(json)) {
+          File.WriteAllText(dataFile, json);
+        }
+      } catch (Exception e) {
+        Debug.WriteLine(e);
+      }
+    }
+
+    public static AreaDto Load(string dictonaryPath) {
+      try {
+        string dataFile = PathUtils.FinalizePath(dictonaryPath) + AppConstants.WorldFileName;
+        if (File.Exists(dataFile)) {
+          string json = File.ReadAllText(dataFile);
+          if (!String.IsNullOrWhiteSpace(json)) {
+            return JsonSerializer.Deserialize<AreaDto>(json);
+          }
+        }
+      } catch (Exception e) {
+        Debug.WriteLine(e);
+      }
+      return null;
+    }
+
   }
 }

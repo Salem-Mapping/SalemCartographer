@@ -2,7 +2,7 @@
 
 namespace SalemCartographer.App.Model
 {
-  internal class DataEventArgs<T> : EventArgs
+  public class DataEventArgs<T> : EventArgs
   {
     public T Value;
 

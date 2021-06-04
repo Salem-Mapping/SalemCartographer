@@ -1,6 +1,8 @@
 ﻿using SalemCartographer.App.Model;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+//using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Timers;
@@ -41,7 +43,7 @@ namespace SalemCartographer.App
     }
 
     public bool IncludeSubdirectories {
-      get => includeSubdirectories; set {
+      get => includeSubdirectories.GetValueOrDefault(); set {
         includeSubdirectories = value;
         if (watcher != null) {
           watcher.IncludeSubdirectories = value;
@@ -50,7 +52,7 @@ namespace SalemCartographer.App
     }
 
     public bool EnableRaisingEvents {
-      get => enableRaisingEvents; set {
+      get => enableRaisingEvents.GetValueOrDefault(); set {
         enableRaisingEvents = value;
         if (watcher != null) {
           watcher.EnableRaisingEvents = value;
@@ -59,7 +61,7 @@ namespace SalemCartographer.App
     }
 
     public NotifyFilters NotifyFilter {
-      get => notifyFilter; set {
+      get => notifyFilter.GetValueOrDefault(); set {
         notifyFilter = value;
         if (watcher != null) {
           watcher.NotifyFilter = value;
@@ -67,16 +69,21 @@ namespace SalemCartographer.App
       }
     }
 
+    private string path;
+    private string filter;
+    private bool? includeSubdirectories;
+    private bool? enableRaisingEvents;
+    private NotifyFilters? notifyFilter;
+
     private List<FileSystemEventArgs> fileEvents;
     private ReaderWriterLockSlim rwlock;
     private Timer processTimer;
     private FileSystemWatcher watcher;
     private Double waitUntilNotify = 500;
-    private string path;
-    private string filter;
-    private bool includeSubdirectories;
-    private bool enableRaisingEvents;
-    private NotifyFilters notifyFilter;
+
+    public FileSystemMonitor(string path) : this(path, "*") {
+
+    }
 
     public FileSystemMonitor(string path, string filter) {
       this.path = path;
@@ -90,24 +97,45 @@ namespace SalemCartographer.App
       InitFileSystemWatcher();
     }
 
+    private bool isInInit = false;
     private void InitFileSystemWatcher() {
       if (watcher != null) {
         watcher.Changed -= Watcher_FileChanged;
         watcher.Error -= Watcher_Error;
         watcher.Dispose();
       }
-      watcher = new();
-      watcher.Path = path;
-      watcher.Filter = filter;
-      watcher.Changed += Watcher_FileChanged;
-      watcher.Error += Watcher_Error;
-      watcher.IncludeSubdirectories = includeSubdirectories;
-      watcher.EnableRaisingEvents = enableRaisingEvents;
-      watcher.NotifyFilter = notifyFilter;
+      try {
+        if (!Directory.Exists(path)) {
+          throw new Exception(String.Format("Path {0} does not exist!", path));
+        }
+        isInInit = true;
+        watcher = new FileSystemWatcher(path, string.IsNullOrWhiteSpace(filter) ? "*" : filter);
+        watcher.Changed += Watcher_FileChanged;
+        watcher.Error += Watcher_Error;
+        if (includeSubdirectories.HasValue) {
+          watcher.IncludeSubdirectories = includeSubdirectories.Value;
+        } else {
+          includeSubdirectories = watcher.IncludeSubdirectories;
+        }
+        if (enableRaisingEvents.HasValue) {
+          watcher.EnableRaisingEvents = enableRaisingEvents.Value;
+        } else {
+          enableRaisingEvents = watcher.EnableRaisingEvents;
+        }
+        if (notifyFilter.HasValue) {
+          watcher.NotifyFilter = notifyFilter.Value;
+        } else {
+          notifyFilter = watcher.NotifyFilter;
+        }
+        isInInit = false;
+      } catch (Exception e) {
+        System.Diagnostics.Debug.WriteLine(e);
+      }
     }
 
     private void Watcher_FileChanged(object sender, FileSystemEventArgs e) {
       try {
+        System.Diagnostics.Debug.WriteLine("add queue: " + e.FullPath);
         rwlock.EnterWriteLock();
         fileEvents.Add(e);
         if (processTimer == null) {
@@ -126,13 +154,17 @@ namespace SalemCartographer.App
     }
 
     private void Watcher_Error(object sender, ErrorEventArgs e) {
-      // Watcher crashed. Re-init.
-      InitFileSystemWatcher();
+      Debug.WriteLine(e.GetException());
+      if (!isInInit) {
+        InitFileSystemWatcher();
+      } else {
+        throw e.GetException();
+      }
     }
 
     private void ProcessQueue(object sender, ElapsedEventArgs args) {
       try {
-        Console.WriteLine("Processing queue, " + fileEvents.Count + " files created:");
+        System.Diagnostics.Debug.WriteLine("Processing queue, " + fileEvents.Count + " files created:");
         rwlock.EnterReadLock();
         ChangedBulk?.Invoke(this, new(new(fileEvents)));
         fileEvents.Clear();

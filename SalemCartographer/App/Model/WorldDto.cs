@@ -1,24 +1,28 @@
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
+using System.Text.Json.Serialization;
 
 namespace SalemCartographer.App.Model
 {
-  public class WorldDto
+  public class WorldDto : AbstractModel
   {
-    public Dictionary<string, AreaDto> Areas { get; set; }
+    // serialize
+    [JsonInclude]
+    public SortedDictionary<string, AreaDto> Areas { get; set; }
 
-    public List<AreaDto> AreaList {
-      get {
-        return Areas.Values.ToList();
-      }
-    }
+    // transient
+    [JsonIgnore]
+    public List<AreaDto> AreaList => Areas.Values.ToList();
 
     public WorldDto() {
       Areas = new();
     }
 
-    public void SetAreas(List<AreaDto> NewAreas) {
-      Areas = NewAreas.Distinct().ToDictionary(x => x.DisplayString, x => x);
+    public WorldDto(WorldDto dto) : this() {
+      foreach (var old in dto.Areas) {
+        Areas[old.Key] = new(old.Value);
+      }
     }
 
     public void AddArea(AreaDto NewArea) {

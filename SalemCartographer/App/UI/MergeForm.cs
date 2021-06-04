@@ -45,7 +45,7 @@ namespace SalemCartographer.App.UI
       }
       bool calcScore = false;
       Point offset = Offset;
-      if (area is not MatchedAreaDto matchedArea || !offset.Equals(matchedArea.Offset)) {
+      if (!area.Offset.HasValue || !offset.Equals(area.Offset)) {
         calcScore = true;
       }
       AreaDto mergeArea = new(area) {
@@ -54,14 +54,14 @@ namespace SalemCartographer.App.UI
         Directory = String.Empty
       };
       foreach (var sourceTile in SourceArea.TileList) {
-        MatchedTileDto tile = new(sourceTile);
+        TileDto tile = new(sourceTile);
         Point coord = tile.Coordinate;
         coord.Offset(offset);
         tile.Coordinate = coord;
-        if (area.Tiles.ContainsKey(tile.GetKey())) {
-          var orgTile = area.Tiles[tile.GetKey()];
-          if (!calcScore && orgTile is MatchedTileDto matchedTile) {
-            tile.Score = matchedTile.Score;
+        if (area.Tiles.ContainsKey(tile.Key)) {
+          var orgTile = area.Tiles[tile.Key];
+          if (!calcScore && orgTile.Score.HasValue) {
+            tile.Score = orgTile.Score;
           } else {
             tile.Score = TileComparator.Compare(sourceTile, orgTile);
           }
@@ -76,8 +76,8 @@ namespace SalemCartographer.App.UI
       AreaDto area = (AreaDto)ComboBoxAreas.SelectedItem;
       CanvasOther.SetArea(area);
       CanvasThis.SelectedTile = new();
-      if (area is MatchedAreaDto match) {
-        CanvasOther.SelectedTile = match.Offset;
+      if (area.Offset.HasValue) {
+        CanvasOther.SelectedTile = area.Offset.Value;
       }
       CalculateMerged();
     }
@@ -115,7 +115,7 @@ namespace SalemCartographer.App.UI
       ButtonCancel.Click += OnSubmit;
 
       // set data
-      ComboBoxAreas.SelectedItem = targetAreas.OrderByDescending(a => (a is MatchedAreaDto m) ? m.Score : 0).First();
+      ComboBoxAreas.SelectedItem = targetAreas.OrderByDescending(a => (a.Score.HasValue) ? a.Score : 0).First();
       OnAreaChanged(this, EventArgs.Empty);
     }
   }

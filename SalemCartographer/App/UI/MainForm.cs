@@ -9,17 +9,14 @@ namespace SalemCartographer.App.UI
 {
   public partial class MainForm : Form
   {
-    private List<MatchedAreaDto> matchedAreas = new();
-
     public MainForm() {
       InitializeComponent();
       Initalize();
-      BuildSessionList();
-      BuildWorldList();
     }
 
     protected void Initalize() {
-      Text = ApplicationConstants.ProductName;
+      this.Load += OnFormLoad;
+      Text = AppConstants.ProductName;
       ListSessions.DisplayMember = AreaDto.FIELD_TITLE;
       ListSessions.SelectedValueChanged += OnSelectionChanged;
       ListMaps.DisplayMember = AreaDto.FIELD_TITLE;
@@ -30,9 +27,16 @@ namespace SalemCartographer.App.UI
       ToolMapsOpen.Click += OnToolOpen;
       ToolMapsAdd.Click += OnToolMapsAddClicked;
       ToolMapsDelete.Click += OnToolDelete;
+      ToolAutoMerge.Click += OnToolAutoMergeClicked;
       SessionController.Instance.SessionChanged += OnSessionDataChanged;
       SessionController.Instance.DataChanged += OnSessionDataChanged;
-      WorldController.Instance.DataChanged += OnSessionDataChanged;
+      SessionController.Instance.PositionChanged += OnSessionPositionChanged;
+      WorldController.Instance.DataChanged += OnWorldDataChanged;
+    }
+
+    protected void OnFormLoad(object sender, EventArgs e) {
+      BuildWorldList();
+      BuildSessionList();
     }
 
     protected void OnWorldDataChanged(object sender, EventArgs e) {
@@ -40,11 +44,12 @@ namespace SalemCartographer.App.UI
     }
 
     protected void BuildWorldList() {
-      Debug.WriteLine("BuildWorldList");
-      if (WorldController.Instance.World.Areas.Count == 0) {
+      Debug.WriteLine("====================================================");
+      Debug.WriteLine("BuildWorldList: " + WorldController.Instance.AreaList.Count);
+      if (WorldController.Instance.AreaList.Count == 0) {
         WorldController.Instance.CreateAreaFromSession();
       }
-      ListMaps.DataSource = new List<AreaDto>(WorldController.Instance.World.AreaList);
+      RefreshList(ListMaps, WorldController.Instance.World.AreaList);
     }
 
     protected void OnSessionDataChanged(object sender, EventArgs e) {
@@ -52,45 +57,125 @@ namespace SalemCartographer.App.UI
     }
 
     protected void BuildSessionList() {
-      Debug.WriteLine("BuildSessionList");
-      ListSessions.DataSource = new List<AreaDto>(SessionController.Instance.SessionList);
+      Debug.WriteLine("====================================================");
+      Debug.WriteLine("BuildSessionList: " + SessionController.Instance.AreaList.Count);
+      RefreshList(ListSessions, SessionController.Instance.AreaList);
+    }
+
+    private bool changingSource;
+    private void RefreshList(ListBox list, IList<AreaDto> data) {
+      try {
+        list.Invoke(new Action(() => {
+          changingSource = true;
+          List<AreaDto> areaDtos = new(data);
+          list.DataSource = areaDtos;
+          list.Refresh();
+          changingSource = false;
+        }));
+
+      } catch (Exception) { }
+    }
+
+    private void SelectItem(ListBox list, AreaDto item) {
+      try {
+        list.Invoke(new Action(() => {
+          if (!ListSessions.Equals(list)) {
+            ListSessions.SelectedItem = null;
+          } else if (!ListMaps.Equals(list)) {
+            ListMaps.SelectedItem = null;
+          }
+          list.SelectedItem = item;
+        }));
+      } catch (Exception) { }
     }
 
     private void OnSelectionChanged(object sender, EventArgs e) {
+      if (changingSource) {
+        return;
+      }
       ListBox list = (ListBox)sender;
       AreaDto selectedItem = GetSelectedArea(list);
       if (selectedItem == null) {
         return;
       }
-      Canvas.SetArea(selectedItem);
-      if (list.Name == ListSessions.Name) {
-        matchedAreas = WorldController.Instance.GetKnownAreas(selectedItem);
-        foreach (var item in WorldController.Instance.World.AreaList) {
-          if (!matchedAreas.Contains(item)) {
-            matchedAreas.Add(new(item));
-          }
-        }
-        Canvas.AddMatchedAreas(matchedAreas);
+      switch (selectedItem.Type) {
+        case Enum.AreaType.World:
+          ListSessions.SelectedItem = null;
+          break;
+        case Enum.AreaType.Session:
+          ListMaps.SelectedItem = null;
+          break;
       }
+      if (selectedItem.Type == Enum.AreaType.Session) {
+        if (!selectedItem.MatchingAreas.Any()) {
+          selectedItem.MatchingAreas = WorldController.Instance.GetKnownAreas(selectedItem);
+        }
+        Debug.WriteLine(String.Format("Area '{0}' matches {1} times", selectedItem.Name, selectedItem.MatchingAreas.Count));
+      }
+      Canvas.SetArea(selectedItem);
+    }
+
+    protected void OnSessionPositionChanged(Object sender, SessionController.PositionEventArgs e) {
+      if (e.Area == null) {
+        return;
+      }
+      try {
+        ListBox list;
+        switch (e.Area.Type) {
+          case Enum.AreaType.World:
+            list = ListMaps;
+            break;
+          case Enum.AreaType.Session:
+            list = ListSessions;
+            break;
+          case Enum.AreaType.Preview:
+          default:
+            return;
+        }
+        SelectItem(list, e.Area);
+        Canvas.Invoke(new Action(() => {
+          Canvas.SetArea(e.Area);
+          Canvas.CenteredTile = e.Position;
+          Canvas.SelectedTile = e.Position;
+        }));
+      } catch (Exception) { }
     }
 
     protected void OnSessionDataChanged(Object sender, StringDataEventArgs e) {
     }
 
-    protected void OnToolSessionMerge(Object sender, EventArgs e) {
+    protected void OnToolSessionMerge(Object sender, EventArgs ev) {
       AreaDto sourceArea = GetSelectedSession();
       if (sourceArea == null) {
         MessageBox.Show("select a area to merge, first!");
         return;
       }
-      MergeForm form = new(sourceArea, matchedAreas);
+      AreaDto targetArea = null;
+      if (!sourceArea.MatchingAreas.Any()) {
+        sourceArea.MatchingAreas = WorldController.Instance.GetKnownAreas(sourceArea);
+      }
+      if (sourceArea.MatchingAreas.Any()) {
+        try {
+          targetArea = sourceArea.MatchingAreas.OrderByDescending(a => (a.Score.HasValue) ? a.Score : 0).First();
+        } catch (Exception e) {
+          Debug.WriteLine(this.GetType().Name + ": " + e);
+        }
+      }
+
+      List<AreaDto> targetAreas = new(sourceArea.MatchingAreas);
+      foreach (var map in WorldController.Instance.AreaList) {
+        if (!targetAreas.Contains(map)) {
+          targetAreas.Add(map);
+        }
+      }
+
+      MergeForm form = new(sourceArea, targetAreas);
       var result = form.ShowDialog();
       switch (result) {
         case DialogResult.OK:
         case DialogResult.Yes:
           WorldController.Instance.Merge(form.SourceArea, form.TargetArea, form.Offset);
           break;
-
         case DialogResult.None:
         case DialogResult.Cancel:
         case DialogResult.Abort:
@@ -102,15 +187,15 @@ namespace SalemCartographer.App.UI
       }
     }
 
+    private IEnumerable<AreaDto> GetSelectedSessions() => GetSelectedAreas(ListSessions);
+
+    private IEnumerable<AreaDto> GetSelectedMaps() => GetSelectedAreas(ListMaps);
+
 #nullable enable
 
-    private AreaDto? GetSelectedSession() {
-      return GetSelectedArea(ListSessions);
-    }
+    private AreaDto? GetSelectedSession() => GetSelectedArea(ListSessions);
 
-    private AreaDto? GetSelectedMap() {
-      return GetSelectedArea(ListMaps);
-    }
+    private AreaDto? GetSelectedMap() => GetSelectedArea(ListMaps);
 
     private AreaDto? GetSelectedArea(ListBox list) {
       try {
@@ -119,11 +204,19 @@ namespace SalemCartographer.App.UI
         }
         return ((AreaDto)list.SelectedItem);
       } catch (Exception e) {
-        Debug.WriteLine(e);
+        Debug.WriteLine(this.GetType().Name + ": " + e);
         return null;
       }
     }
 
+    private IEnumerable<AreaDto> GetSelectedAreas(ListBox list) {
+      try {
+        return list.SelectedItems.Cast<AreaDto>();
+      } catch (Exception e) {
+        Debug.WriteLine(this.GetType().Name + ": " + e);
+        return Enumerable.Empty<AreaDto>();
+      }
+    }
 #nullable disable
 
     protected void OnToolOpen(Object sender, EventArgs e) {
@@ -144,33 +237,38 @@ namespace SalemCartographer.App.UI
     }
 
     protected void OnToolDelete(Object sender, EventArgs e) {
-      AreaDto area = null;
+      IEnumerable<AreaDto> col = Enumerable.Empty<AreaDto>();
       if (sender == ToolSessionDelete) {
-        area = GetSelectedSession();
+        col = GetSelectedSessions();
       } else if (sender == ToolMapsDelete) {
-        area = GetSelectedMap();
+        col = GetSelectedMaps();
       }
-      if (area == null) {
+      if (col == null || !col.Any()) {
         MessageBox.Show("select a area, first!");
         return;
       }
-      switch (area.Type) {
-        case Enum.AreaType.World:
-          WorldController.Instance.Delete(area);
-          break;
-
-        case Enum.AreaType.Session:
-          SessionController.Instance.Delete(area);
-          break;
-
-        case Enum.AreaType.Preview:
-        default:
-          break;
+      foreach (var area in col) {
+        switch (area.Type) {
+          case Enum.AreaType.World:
+            WorldController.Instance.Delete(area);
+            break;
+          case Enum.AreaType.Session:
+            SessionController.Instance.Delete(area);
+            break;
+          case Enum.AreaType.Preview:
+          default:
+            break;
+        }
       }
     }
 
-    protected void OnToolMapsAddClicked(Object sender, EventArgs e) {
-      WorldController.Instance.CreateAreaFromSession();
+    public void OnToolAutoMergeClicked(object sender, EventArgs e) => WorldController.Instance.AutoMergeAsync(SessionController.Instance.SessionList);
+
+    protected void OnToolMapsAddClicked(object sender, EventArgs e) => WorldController.Instance.CreateAreaFromSession();
+
+    private void MainForm_Load(object sender, EventArgs e) {
+
     }
+
   }
 }
