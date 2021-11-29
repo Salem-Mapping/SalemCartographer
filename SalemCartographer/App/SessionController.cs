@@ -36,6 +36,7 @@ namespace SalemCartographer.App
     public string CurrentSession { get; private set; }
     public Dictionary<string, AreaDto> Sessions { get; private set; }
     public List<AreaDto> SessionList => Sessions.Values.ToList();
+    private Point? LastPosition = null;
 
     public event EventHandler<StringDataEventArgs> SessionChanged;
     public event EventHandler<PositionEventArgs> PositionChanged;
@@ -178,16 +179,22 @@ namespace SalemCartographer.App
           if (area == null) {
             continue;
           }
+          if (currArea != area) {
+            LastPosition = null;
+          }
           currArea ??= area;
           // calc position
           var newFiles = files.Where(s => s.StartsWith(PathUtils.FinalizePath(area.Path))).Select(Path.GetFileName);
           var postions = newFiles.Select(TileProcessor.ParseFileName);
+          if (LastPosition.HasValue) {
+            postions.Concat(new List<Point>() { LastPosition.Value });
+          }
           Point min = new(postions.Select(p => p.X).Min(), postions.Select(p => p.Y).Min());
           Point max = new(postions.Select(p => p.X).Max(), postions.Select(p => p.Y).Max());
           int width = max.X - min.X;
           int height = max.Y - min.Y;
-          Point pos = new(min.X + width / 2, min.Y + height / 2);
-          currPos = currPos == null ? pos : currPos;
+          currPos = new(min.X + width / 2, min.Y + height / 2);
+          LastPosition = currPos;
           // find map
           if (!area.MatchingAreas.Any()) {
             area.MatchingAreas = WorldController.Instance.GetKnownAreas(area);
@@ -222,11 +229,12 @@ namespace SalemCartographer.App
               Debug.WriteLine(this.GetType().Name + ": " + e);
             }
           }
-          pos.Offset(matchingArea.Offset.Value);
+          if (currPos.HasValue) {
+            currPos.Value.Offset(matchingArea.Offset.Value);
+          }
           currArea = targetArea;
-          currPos = pos;
         }
-        Debug.WriteLine("finish Live-Merge");
+        Debug.WriteLine("finish Live-Merge Process");
         if (changed) {
           InvokeDataChanged();
         }
@@ -243,7 +251,7 @@ namespace SalemCartographer.App
     public class PositionEventArgs : EventArgs
     {
       public AreaDto Area;
-      public Point Position;
+      public Point Position; 
 
       internal PositionEventArgs() { }
       internal PositionEventArgs(AreaDto area, Point position) : this() {
