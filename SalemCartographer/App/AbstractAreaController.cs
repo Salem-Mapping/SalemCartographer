@@ -1,7 +1,6 @@
 ﻿using SalemCartographer.App.Enum;
 using SalemCartographer.App.Model;
 using SalemCartographer.App.Utils;
-using SalemCartographer.App.Worker;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -42,6 +41,7 @@ namespace SalemCartographer.App
         AreaDto Area = AreaProcessor.BuildDto(path);
         if (Areas.TryGetValue(Area.Directory, out var existingArea) && existingArea != null) {
           Area = existingArea;
+          Area.Path = path;
         }
         Area.Type = Type;
         AreaProcessor.RefreshDto(Area);
@@ -123,7 +123,8 @@ namespace SalemCartographer.App
             DataChanged?.Invoke(this, new(new(Areas)));
           };
           processTimer.Start();
-        } else {
+        }
+        else {
           processTimer.Stop();
           processTimer.Start();
         }

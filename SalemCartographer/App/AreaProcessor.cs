@@ -45,6 +45,7 @@ namespace SalemCartographer.App
 
     public static AreaDto BuildDto(String areaPath) {
       string path = areaPath.EndsWith(Path.DirectorySeparatorChar) ? areaPath[0..^1] : areaPath;
+      string finalizedPath = PathUtils.FinalizePath(areaPath);
       AreaDto area = null;
       if (Directory.Exists(path)) {
         area = Load(path);
@@ -52,10 +53,14 @@ namespace SalemCartographer.App
       if (area == null) {
         string name = Path.GetFileName(path);
         area = new() {
-          Path = PathUtils.FinalizePath(areaPath),
+          Path = finalizedPath,
           Name = name,
           Directory = name,
         };
+      }
+      else if (!finalizedPath.Equals(area.Path)) {
+        area.Path = finalizedPath;
+        RefreshDto(area);
       }
       return area;
     }
@@ -69,8 +74,10 @@ namespace SalemCartographer.App
       foreach (var file in files) {
         TileDto tile = area.GetTile(TileProcessor.ParseFileName(file));
         if (tile != null && tile is TileDto) {
+          tile.Path = file;
           tileProcessor.SetDto(tile);
-        } else {
+        }
+        else {
           tileProcessor.SetPath(file);
         }
         if (tileProcessor.IsValid()) {
