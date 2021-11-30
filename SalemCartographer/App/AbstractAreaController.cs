@@ -113,6 +113,7 @@ namespace SalemCartographer.App
 
     private readonly ReaderWriterLockSlim rwlock = new();
     private Timer processTimer;
+
     protected void InvokeDataChanged() {
       try {
         rwlock.EnterWriteLock();

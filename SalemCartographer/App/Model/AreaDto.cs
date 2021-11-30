@@ -17,8 +17,6 @@ namespace SalemCartographer.App.Model
     [JsonInclude]
     public string Name;
     [JsonInclude]
-    public string Path;
-    [JsonInclude]
     public string Directory;
     [JsonInclude]
     public string Hash;
@@ -26,6 +24,8 @@ namespace SalemCartographer.App.Model
     public Dictionary<string, TileDto> Tiles { get => tiles ??= new(); protected set => tiles = value; }
 
     // transient
+    [JsonIgnore] 
+    public string Path;
     [JsonIgnore]
     public Point? LastLocation;
     [JsonIgnore]

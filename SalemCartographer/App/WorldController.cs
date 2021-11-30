@@ -252,7 +252,7 @@ namespace SalemCartographer.App
         return null;
       }
       newTile.FileName = TileProcessor.GenerateFileName(newTile);
-      newTile.Path = targetArea.Path + newTile.FileName;
+      newTile.Path = PathUtils.FinalizePath(targetArea.Path) + newTile.FileName;
       lock (sourceTile) {
         File.Copy(sourceTile.Path, newTile.Path, true);
       }

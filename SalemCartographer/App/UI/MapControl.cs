@@ -41,7 +41,8 @@ namespace SalemCartographer.App.UI
         selectedTile = value;
         if (value.HasValue) {
           CenteredTile = value.Value;
-        } else {
+        }
+        else {
           Invalidate();
         }
       }
@@ -201,9 +202,11 @@ namespace SalemCartographer.App.UI
             Color color;
             if (MatchScore <= tile.Score.Value) {
               color = MatchColor;
-            } else if (PartialScore <= tile.Score.Value) {
+            }
+            else if (PartialScore <= tile.Score.Value) {
               color = PartialMatchColor;
-            } else {
+            }
+            else {
               color = DismatchColor;
             }
             Point SelectedCoords = CalcCanvasCoordinates(tile.Coordinate);
@@ -304,12 +307,15 @@ namespace SalemCartographer.App.UI
     }
 
     private void MoveMap(Point p) {
+      if (area == null) {
+        return;
+      }
       if (MouseLast.X != p.X || MouseLast.Y != p.Y) {
         areaCenter.Offset(p.X - MouseLast.X, p.Y - MouseLast.Y);
         area.LastLocation = CenteredTile;
         Debug.WriteLine("Last: " + area.LastLocation);
-        Invalidate();
       }
+      Invalidate();
     }
 
     private void ResetZoom() {

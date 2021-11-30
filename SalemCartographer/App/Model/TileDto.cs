@@ -13,8 +13,6 @@ namespace SalemCartographer.App.Model
 
     // serialize
     [JsonInclude]
-    public string Path { get; set; }
-    [JsonInclude]
     public int X { get; set; }
     [JsonInclude]
     public int Y { get; set; }
@@ -28,6 +26,8 @@ namespace SalemCartographer.App.Model
     public DateTime Date { get; set; }
 
     // transient
+    [JsonIgnore]
+    public string Path { get; set; } 
     [JsonIgnore]
     public string Key => String.Format(FormatKey, X, Y);
     [JsonIgnore]
