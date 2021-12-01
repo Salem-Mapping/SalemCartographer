@@ -75,10 +75,12 @@ namespace SalemCartographer.App
         if (session.MatchingAreas.Any()) {
           continue;
         }
-        session.MatchingAreas = WorldController.Instance.GetKnownAreas(session);
+        if (session.MatchingAreas != null && session.MatchingAreas.Count == 0) {
+          session.MatchingAreas = WorldController.Instance.GetKnownAreas(session);
+        }
       }
-      Debug.WriteLine("====================================================");
-      Debug.WriteLine(String.Format("Matching Areas complete: {0}, after: {1} ms", Type, w.ElapsedMilliseconds));
+      //    Debug.WriteLine("====================================================");
+      //    Debug.WriteLine(String.Format("Matching Areas complete: {0}, after: {1} ms", Type, w.ElapsedMilliseconds));
       cancelMatching = null;
     }
     protected async void RefreshMatchesAsync() {
@@ -111,7 +113,8 @@ namespace SalemCartographer.App
           ReadCurrentSessionName();
           SessionChanged?.Invoke(this, new StringDataEventArgs(CurrentSession));
           Debug.WriteLine(String.Format("Session changed to: {0} -> {1}", e.Name, CurrentSession));
-        } else {
+        }
+        else {
           Debug.WriteLine(String.Format("File: {0} -> {1}", e.Name, e.ChangeType));
           refreshNeeded = true;
           switch (e.ChangeType) {
@@ -230,11 +233,13 @@ namespace SalemCartographer.App
             }
           }
           if (currPos.HasValue) {
-            currPos.Value.Offset(matchingArea.Offset.Value);
+            Point value = currPos.Value;
+            value.Offset(matchingArea.Offset.Value);
+            currPos = value;
           }
           currArea = targetArea;
         }
-        Debug.WriteLine("finish Live-Merge Process");
+        Debug.WriteLine("finish Live-Merge Process: " + currPos.Value);
         if (changed) {
           InvokeDataChanged();
         }
@@ -245,13 +250,13 @@ namespace SalemCartographer.App
     }
 
     public void InvokePositionChange(AreaDto area, Point position) {
-      PositionChanged?.Invoke(this, new(area, position));
+      PositionChanged?.Invoke(this, new(area, new(position.X, position.Y)));
     }
 
     public class PositionEventArgs : EventArgs
     {
       public AreaDto Area;
-      public Point Position; 
+      public Point Position;
 
       internal PositionEventArgs() { }
       internal PositionEventArgs(AreaDto area, Point position) : this() {

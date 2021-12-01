@@ -45,8 +45,9 @@ namespace SalemCartographer.App.UI
 
     protected void BuildWorldList() {
       Debug.WriteLine("====================================================");
-      Debug.WriteLine("BuildWorldList: " + WorldController.Instance.AreaList.Count);
-      if (WorldController.Instance.AreaList.Count == 0) {
+      IList<AreaDto> areaList = WorldController.Instance.AreaList;
+      Debug.WriteLine("BuildWorldList: " + areaList.Count);
+      if (areaList.Count == 0) {
         WorldController.Instance.CreateAreaFromSession();
       }
       RefreshList(ListMaps, WorldController.Instance.World.AreaList);
@@ -58,12 +59,13 @@ namespace SalemCartographer.App.UI
 
     protected void BuildSessionList() {
       Debug.WriteLine("====================================================");
-      Debug.WriteLine("BuildSessionList: " + SessionController.Instance.AreaList.Count);
-      RefreshList(ListSessions, SessionController.Instance.AreaList);
-    }
+      IList<AreaDto> areaList = SessionController.Instance.AreaList;
+      Debug.WriteLine("BuildSessionList: " + areaList.Count);
+      RefreshList(ListSessions, areaList.Reverse()); 
+    } 
 
     private bool changingSource;
-    private void RefreshList(ListBox list, IList<AreaDto> data) {
+    private void RefreshList(ListBox list, IEnumerable<AreaDto> data) {
       try {
         list.Invoke(new Action(() => {
           changingSource = true;

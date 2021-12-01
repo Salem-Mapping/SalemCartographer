@@ -94,7 +94,7 @@ namespace SalemCartographer.App
         }
       }
       if (knownAreas.Count == 0) {
-        Debug.WriteLine(String.Format("Area '{0}' => no matching areas found", area.Directory));
+   //     Debug.WriteLine(String.Format("Area '{0}' => no matching areas found", area.Directory));
         return matchingAreas;
       }
       foreach (var knownArea in knownAreas) {
